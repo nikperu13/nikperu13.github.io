@@ -5,132 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Parallel Selenium Framework | Nicolas Garcia Rosell</title>
     <link rel="icon" type="image/svg+xml" href="../assets/favicon/favicon.svg" />
-    <link rel="stylesheet" href="../assets/css/bootstrap.css" />
-    <style>
-      body {
-        margin: 0;
-        font-family: "Manrope", "Segoe UI", sans-serif;
-        background: linear-gradient(180deg, #f4f7f1 0%, #eef4ea 60%, #f7f8f5 100%);
-        color: #173f1b;
-      }
-      .wrap {
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 2rem 1rem 3rem;
-      }
-      .topbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.25rem;
-      }
-      .btn-back {
-        border-radius: 999px;
-        padding: 0.5rem 0.95rem;
-        border: 1px solid rgba(47, 122, 50, 0.35);
-        background: #f5e7a1;
-        color: #173f1b;
-        text-decoration: none;
-        font-weight: 700;
-      }
-      .hero {
-        border: 1px solid rgba(47, 122, 50, 0.2);
-        background: #fff;
-        border-radius: 14px;
-        padding: 1.25rem;
-        box-shadow: 0 12px 26px rgba(24, 63, 27, 0.08);
-      }
-      .pills {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 10px;
-      }
-      .pills span {
-        font-size: 0.78rem;
-        font-weight: 700;
-        border: 1px solid rgba(47, 122, 50, 0.25);
-        border-radius: 999px;
-        background: #f5e7a1;
-        color: #173f1b;
-        padding: 3px 9px;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(260px, 1fr));
-        gap: 14px;
-        margin-top: 14px;
-      }
-      .hero-shot {
-        margin-top: 12px;
-        border: 1px solid rgba(47, 122, 50, 0.22);
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 8px 20px rgba(24, 63, 27, 0.12);
-      }
-      .hero-shot img {
-        width: 100%;
-        display: block;
-      }
-      .card {
-        border: 1px solid rgba(47, 122, 50, 0.2);
-        background: rgba(255, 255, 255, 0.94);
-        border-radius: 12px;
-        padding: 1rem;
-      }
-      h1 {
-        margin: 0;
-      }
-      h2 {
-        margin: 0 0 0.55rem;
-        font-size: 1.1rem;
-      }
-      ul {
-        margin: 0;
-        padding-left: 1.1rem;
-      }
-      li + li {
-        margin-top: 0.35rem;
-      }
-      .links {
-        margin-top: 1rem;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .btn-link {
-        border-radius: 999px;
-        padding: 0.55rem 0.95rem;
-        border: 1px solid rgba(47, 122, 50, 0.35);
-        background: #173f1b;
-        color: #e9f4e8;
-        text-decoration: none;
-        font-weight: 700;
-      }
-      @media (max-width: 860px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="../assets/css/project.css" />
   </head>
   <body>
     <main class="wrap">
       <div class="topbar">
-        <a class="btn-back" href="/index.html#projects">Back to Projects</a>
+        <a class="btn-back" href="../index.html#projects">Back to Projects</a>
       </div>
       <section class="hero">
         <h1>Parallel Selenium Framework</h1>
-        <p class="mb-2 mt-2">
-          Built a scalable Selenium automation framework for high-change enterprise applications with deterministic parallel execution.
-        </p>
+        <p>Built a scalable Selenium automation framework for high-change enterprise applications with deterministic parallel execution.</p>
         <div class="pills">
-          <span>Java</span>
-          <span>Selenium</span>
-          <span>TestNG</span>
-          <span>Maven</span>
-          <span>Docker</span>
-          <span>GitLab CI</span>
+          <span>Java</span><span>Selenium</span><span>TestNG</span><span>Maven</span><span>Docker</span><span>CI</span>
         </div>
         <div class="hero-shot">
           <img src="../assets/img/work/selenium-java.png" alt="Parallel Selenium framework screenshot" />
@@ -140,9 +26,7 @@
       <section class="grid">
         <article class="card">
           <h2>Problem</h2>
-          <p>
-            Regression cycles were long and flaky, with shared driver/data states causing inconsistent failures and low confidence in automated results.
-          </p>
+          <p>Regression cycles were long and flaky, with shared driver/data states causing inconsistent failures.</p>
         </article>
         <article class="card">
           <h2>Architecture Decisions</h2>
@@ -168,6 +52,15 @@
             <li>Better maintainability with modular framework boundaries.</li>
           </ul>
         </article>
+      </section>
+
+      <section class="card decisions">
+        <h2>Engineering Decisions</h2>
+        <ul>
+          <li><strong>Tradeoff:</strong> Chose ThreadLocal driver isolation over shared pool complexity. <strong>Why:</strong> Determinism and debuggability mattered more than micro-optimizing driver reuse.</li>
+          <li><strong>Tradeoff:</strong> Introduced service-layer abstractions beyond basic POM. <strong>Why:</strong> Enterprise workflows needed reusable orchestration separate from page mechanics.</li>
+          <li><strong>Tradeoff:</strong> Added bounded retry only for transient failure types. <strong>Why:</strong> Improve run stability without hiding product defects.</li>
+        </ul>
       </section>
 
       <div class="links">

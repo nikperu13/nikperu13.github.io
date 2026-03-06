@@ -1,35 +1,29 @@
-# nikperu13.github.io
+# Nicolas Garcia Rosell | SDET Portfolio
 
-## TypeScript workflow
+Portfolio focused on automation framework engineering, CI scalability, and release reliability.
 
-- Source files: `src/ts/*.ts`
-- Custom plugin typings: `src/ts/types/jquery-plugins.d.ts`
-- Build config: `tsconfig.json`
-- Build output target: `assets/js/*.js`
+## Pages
 
-### Commands
+- `index.html` -> main landing page (hero, philosophy, project portfolio, experience, contact)
+- `projects/selenium-framework.html` -> parallel Selenium framework case study
+- `projects/playwright-framework.html` -> Playwright + API architecture case study
+- `projects/test-data-engine.html` -> test data orchestration case study
 
-- `npm install`
-- `npm run build:ts`
-- `npm run watch:ts`
-- `npm run check:ts`
+## Highlights Included
 
-### Documentation
+- Impact strip with measurable outcomes (`98% coverage`, `6-7x faster regression`, `~80% flakiness reduction`)
+- Engineering philosophy section for deterministic quality principles
+- Project case studies with architecture, outcomes, and engineering tradeoff decisions
+- Experience section condensed to high-signal delivery metrics
+- Contact section with direct email + phone links
 
-- `docs/typescript-migration.md`
-- `docs/frontend-behavior.md`
-- `docs/typescript-refresher.md`
+## Tech Stack
 
-## Modern frontend stack
+- HTML5
+- CSS3 (`assets/css/site.css`, `assets/css/project.css`)
+- Vanilla JavaScript (`assets/js/site.js`)
+- Inline SVG icons (no icon-font dependency)
 
-- Build/dev server: `Vite`
-- Styling: `Tailwind CSS`
-- Icons: `Lucide`
-- Motion: `GSAP`
-- Smooth scrolling: `Lenis`
+## Local Run
 
-### Commands
-
-- `npm run dev` (local dev server)
-- `npm run build` (production build)
-- `npm run preview` (preview production build)
+Open `index.html` directly in your browser, or run a local static server from repo root.
