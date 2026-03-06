@@ -1,0 +1,14 @@
+{
+  "name": "nikperu13-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:ts": "tsc -p tsconfig.json",
+    "watch:ts": "tsc -p tsconfig.json --watch",
+    "check:ts": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
+

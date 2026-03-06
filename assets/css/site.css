@@ -194,6 +194,8 @@ button:focus-visible {
 
 .hero {
   position: relative;
+  --hero-shift-x: 0px;
+  --hero-shift-y: 0px;
   min-height: clamp(360px, 48vh, 520px);
   padding: 64px 0 36px;
   overflow: hidden;
@@ -214,6 +216,7 @@ button:focus-visible {
   left: -130px;
   top: 10px;
   background: radial-gradient(circle at 35% 35%, rgba(70, 197, 111, 0.45), rgba(70, 197, 111, 0));
+  transform: translate3d(var(--hero-shift-x), var(--hero-shift-y), 0);
 }
 
 .hero::after {
@@ -222,6 +225,7 @@ button:focus-visible {
   right: -110px;
   top: -70px;
   background: radial-gradient(circle at 45% 45%, rgba(231, 200, 109, 0.3), rgba(231, 200, 109, 0));
+  transform: translate3d(calc(var(--hero-shift-x) * -0.55), calc(var(--hero-shift-y) * -0.55), 0);
 }
 
 .hero-overlay {
@@ -356,6 +360,7 @@ button:focus-visible {
   font-weight: 700;
   color: #ffffff;
 }
+.impact-value.counting { text-shadow: 0 0 14px rgba(255, 255, 255, 0.22); }
 
 .impact-label {
   margin-top: 4px;
@@ -386,6 +391,17 @@ button:focus-visible {
 }
 
 .section-head h2 { font-size: clamp(1.75rem, 3vw, 2.55rem); }
+.section-head h2 .title-word {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 420ms ease, transform 420ms ease;
+  transition-delay: var(--word-delay, 0ms);
+}
+.section-head.in h2 .title-word {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 .card-grid.two {
   display: grid;
@@ -404,6 +420,27 @@ button:focus-visible {
   backdrop-filter: blur(12px);
   transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
+
+.project-card {
+  position: relative;
+  overflow: hidden;
+}
+.project-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    360px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(255, 235, 160, 0.16),
+    rgba(255, 235, 160, 0.08) 24%,
+    rgba(255, 235, 160, 0) 58%
+  );
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;
+}
+.project-card.spotlight-on::before { opacity: 1; }
 
 .card,
 .panel,
@@ -664,6 +701,14 @@ button:focus-visible {
     transition-duration: 0.01ms !important;
   }
   .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .reveal.reveal-pending {
+    opacity: 1;
+    transform: none;
+  }
+  .section-head h2 .title-word {
     opacity: 1;
     transform: none;
   }

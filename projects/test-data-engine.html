@@ -1,37 +1,100 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Test Data Engine | Nicolas Garcia Rosell</title>
-    <link rel="icon" type="image/svg+xml" href="../assets/favicon/favicon.svg" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="../assets/favicon/favicon.svg"
+    />
     <link rel="stylesheet" href="../assets/css/project.css" />
   </head>
   <body>
     <main class="wrap">
-      <div class="topbar"><a class="btn-back" href="../index.html#projects">Back to Projects</a></div>
+      <div class="topbar">
+        <a class="btn-back" href="../index.html#projects">Back to Projects</a>
+      </div>
       <section class="hero">
         <h1>Test Data Engine</h1>
-        <p>Built a data orchestration layer for deterministic setup/cleanup and stable parallel automation across multiple environments.</p>
-        <div class="pills"><span>JSON</span><span>Environment Config</span><span>REST APIs</span><span>Isolation</span><span>Parallel Runs</span></div>
-        <div class="hero-shot"><img src="../assets/img/work/cypress-typescript2.png" alt="Data orchestration automation screenshot" /></div>
+        <p>
+          Built a data orchestration layer for deterministic setup/cleanup and
+          stable parallel automation across multiple environments.
+        </p>
+        <div class="pills">
+          <span>JSON</span><span>Environment Config</span><span>REST APIs</span
+          ><span>Isolation</span><span>Parallel Runs</span>
+        </div>
+        <div class="hero-shot">
+          <img
+            src="../assets/img/work/cypress-typescript2.png"
+            alt="Data orchestration automation screenshot"
+          />
+        </div>
       </section>
       <section class="grid">
-        <article class="card"><h2>Problem</h2><p>Shared test data and environment coupling caused flaky tests and difficult defect isolation during regression execution.</p></article>
-        <article class="card"><h2>Architecture Decisions</h2><ul><li>JSON-driven templates for predictable data construction.</li><li>Environment-aware config mapping for multi-stage runs.</li><li>API-based seed/cleanup workflows per test scope.</li></ul></article>
-        <article class="card"><h2>Key Features</h2><ul><li>Deterministic test data creation at runtime.</li><li>State cleanup utilities to enforce independence.</li><li>Reusable data orchestration methods across suites.</li></ul></article>
-        <article class="card"><h2>Outcome</h2><ul><li>Flakiness reduction through controlled setup patterns.</li><li>Safer concurrent regression execution.</li><li>Faster troubleshooting with predictable test state.</li></ul></article>
+        <article class="card">
+          <h2>Problem</h2>
+          <p>
+            Shared test data and environment coupling caused flaky tests and
+            difficult defect isolation during regression execution.
+          </p>
+        </article>
+        <article class="card">
+          <h2>Architecture Decisions</h2>
+          <ul>
+            <li>JSON-driven templates for predictable data construction.</li>
+            <li>Environment-aware config mapping for multi-stage runs.</li>
+            <li>API-based seed/cleanup workflows per test scope.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>Key Features</h2>
+          <ul>
+            <li>Deterministic test data creation at runtime.</li>
+            <li>State cleanup utilities to enforce independence.</li>
+            <li>Reusable data orchestration methods across suites.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>Outcome</h2>
+          <ul>
+            <li>Flakiness reduction through controlled setup patterns.</li>
+            <li>Safer concurrent regression execution.</li>
+            <li>Faster troubleshooting with predictable test state.</li>
+          </ul>
+        </article>
       </section>
       <section class="card decisions">
         <h2>Engineering Decisions</h2>
         <ul>
-          <li><strong>Tradeoff:</strong> Built API-driven seed/cleanup instead of relying on shared static fixtures. <strong>Why:</strong> Runtime-created state improves isolation and reduces stale data failures.</li>
-          <li><strong>Tradeoff:</strong> Kept data contracts explicit with JSON templates per scenario type. <strong>Why:</strong> Clear contracts made debugging and cross-team reuse easier.</li>
-          <li><strong>Tradeoff:</strong> Added environment mapping layer rather than hardcoded endpoints. <strong>Why:</strong> Enabled consistent execution across local, QA, and CI stages.</li>
+          <li>
+            <strong>Tradeoff:</strong> Built API-driven seed/cleanup instead of
+            relying on shared static fixtures.
+            <strong>Why:</strong> Runtime-created state improves isolation and
+            reduces stale data failures.
+          </li>
+          <li>
+            <strong>Tradeoff:</strong> Kept data contracts explicit with JSON
+            templates per scenario type. <strong>Why:</strong> Clear contracts
+            made debugging and cross-team reuse easier.
+          </li>
+          <li>
+            <strong>Tradeoff:</strong> Added environment mapping layer rather
+            than hardcoded endpoints. <strong>Why:</strong> Enabled consistent
+            execution across local, QA, and CI stages.
+          </li>
         </ul>
       </section>
       <div class="links">
-        <a class="btn-link" href="https://github.com/nikperu13" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+        <a
+          class="btn-link"
+          href="https://github.com/nikperu13"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub Repo</a
+        >
       </div>
     </main>
   </body>

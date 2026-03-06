@@ -21,9 +21,16 @@ Portfolio focused on automation framework engineering, CI scalability, and relea
 
 - HTML5
 - CSS3 (`assets/css/site.css`, `assets/css/project.css`)
-- Vanilla JavaScript (`assets/js/site.js`)
+- TypeScript source (`src/ts/site.ts`) compiled to JavaScript output (`assets/js/site.js`)
 - Inline SVG icons (no icon-font dependency)
 
 ## Local Run
 
 Open `index.html` directly in your browser, or run a local static server from repo root.
+
+## TypeScript Workflow
+
+- Install dependencies: `npm install`
+- Type-check only: `npm run check:ts`
+- Build JS output: `npm run build:ts`
+- Watch while editing: `npm run watch:ts`
