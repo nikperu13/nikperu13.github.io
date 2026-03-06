@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer components {
+  .modern-surface {
+    @apply border border-green-900/10 bg-white/85 shadow-xl;
+  }
+
+  .modern-link {
+    @apply transition-all duration-200;
+  }
+
+  .modern-link:hover {
+    @apply -translate-y-0.5;
+  }
+}
