@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nicolas Garcia Rosell favicon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#173f1b"/>
+      <stop offset="100%" stop-color="#2f7a32"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7e9a8"/>
+      <stop offset="100%" stop-color="#e0c86f"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect x="4.5" y="4.5" width="55" height="55" rx="11" fill="none" stroke="url(#ring)" stroke-width="3"/>
+  <text x="32" y="40" text-anchor="middle" font-family="Manrope, Arial, sans-serif" font-size="25" font-weight="800" fill="#f5e7a1">NG</text>
+</svg>

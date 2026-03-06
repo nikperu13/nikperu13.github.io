@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parallel Selenium Framework | Nicolas Garcia Rosell</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon/favicon.svg" />
+    <link rel="stylesheet" href="../assets/css/project.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="topbar">
+        <a class="btn-back" href="../index.html#projects">Back to Projects</a>
+      </div>
+      <section class="hero">
+        <h1>Parallel Selenium Framework</h1>
+        <p>Built a scalable Selenium automation framework for high-change enterprise applications with deterministic parallel execution.</p>
+        <div class="pills">
+          <span>Java</span><span>Selenium</span><span>TestNG</span><span>Maven</span><span>Docker</span><span>CI</span>
+        </div>
+        <div class="hero-shot">
+          <img src="../assets/img/work/selenium-java.png" alt="Parallel Selenium framework screenshot" />
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Problem</h2>
+          <p>Regression cycles were long and flaky, with shared driver/data states causing inconsistent failures.</p>
+        </article>
+        <article class="card">
+          <h2>Architecture Decisions</h2>
+          <ul>
+            <li>ThreadLocal WebDriver lifecycle for strict isolation.</li>
+            <li>Page Object + service layers to separate behavior and workflows.</li>
+            <li>Reusable DriverHelper abstraction for stability and readability.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>Key Features</h2>
+          <ul>
+            <li>Parallel execution design aligned to CI runtime needs.</li>
+            <li>Retry strategy for transient failures without masking bugs.</li>
+            <li>Reporting integration for actionable defect triage.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>Outcome</h2>
+          <ul>
+            <li>Faster feedback loops through parallelized regression coverage.</li>
+            <li>Higher reliability due to deterministic test setup patterns.</li>
+            <li>Better maintainability with modular framework boundaries.</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="card decisions">
+        <h2>Engineering Decisions</h2>
+        <ul>
+          <li><strong>Tradeoff:</strong> Chose ThreadLocal driver isolation over shared pool complexity. <strong>Why:</strong> Determinism and debuggability mattered more than micro-optimizing driver reuse.</li>
+          <li><strong>Tradeoff:</strong> Introduced service-layer abstractions beyond basic POM. <strong>Why:</strong> Enterprise workflows needed reusable orchestration separate from page mechanics.</li>
+          <li><strong>Tradeoff:</strong> Added bounded retry only for transient failure types. <strong>Why:</strong> Improve run stability without hiding product defects.</li>
+        </ul>
+      </section>
+
+      <div class="links">
+        <a class="btn-link" href="https://github.com/nikperu13" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playwright Framework | Nicolas Garcia Rosell</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon/favicon.svg" />
+    <link rel="stylesheet" href="../assets/css/project.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="topbar"><a class="btn-back" href="../index.html#projects">Back to Projects</a></div>
+      <section class="hero">
+        <h1>Playwright Automation Framework</h1>
+        <p>Designed a modern UI/API automation framework with TypeScript-first patterns, resilient locators, and CI-friendly execution.</p>
+        <div class="pills"><span>TypeScript</span><span>Playwright</span><span>API + UI</span><span>CI</span><span>Locator Strategy</span></div>
+        <div class="hero-shot"><img src="../assets/img/work/playwright-typescript.png" alt="Playwright framework screenshot" /></div>
+      </section>
+      <section class="grid">
+        <article class="card"><h2>Problem</h2><p>UI changes and async workflows created brittle tests and maintenance overhead.</p></article>
+        <article class="card"><h2>Architecture Decisions</h2><ul><li>Component/page abstractions with clear test boundaries.</li><li>Locator strategy favoring accessibility and stability.</li><li>API setup hooks for deterministic state creation.</li></ul></article>
+        <article class="card"><h2>Key Features</h2><ul><li>Unified UI/API test approach in one framework.</li><li>Reusable fixtures and utilities for consistent setup.</li><li>Fast feedback with selective parallelization.</li></ul></article>
+        <article class="card"><h2>Outcome</h2><ul><li>Lower maintenance cost as application behavior evolves.</li><li>More reliable assertions with better synchronization.</li><li>Clearer test ownership and faster debugging cycles.</li></ul></article>
+      </section>
+      <section class="card decisions">
+        <h2>Engineering Decisions</h2>
+        <ul>
+          <li><strong>Tradeoff:</strong> Standardized on role/label-first locators rather than brittle DOM paths. <strong>Why:</strong> Better resilience to UI refactors and accessibility-aligned selection.</li>
+          <li><strong>Tradeoff:</strong> Combined API setup with UI verification in selected flows. <strong>Why:</strong> Reduced end-to-end setup time while still validating user-facing outcomes.</li>
+          <li><strong>Tradeoff:</strong> Scoped parallelism by suite risk level. <strong>Why:</strong> Preserved CI speed gains without increasing noisy contention failures.</li>
+        </ul>
+      </section>
+      <div class="links">
+        <a class="btn-link" href="https://github.com/nikperu13" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </div>
+    </main>
+  </body>
+</html>
