@@ -19,9 +19,8 @@
     <header class="site-header">
       <div class="container nav-wrap">
         <a href="#home" class="brand" aria-label="Back to top">
-          <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7Z" />
-            <path d="m19.4 15l1.2 2.1l-1.6 1.6l-2.1-1.2a7.8 7.8 0 0 1-1.8.8l-.6 2.3h-2.3l-.6-2.3a7.8 7.8 0 0 1-1.8-.8l-2.1 1.2l-1.6-1.6L4.6 15a7.8 7.8 0 0 1-.8-1.8l-2.3-.6v-2.3l2.3-.6c.2-.6.5-1.2.8-1.8L3.4 5.8l1.6-1.6l2.1 1.2c.6-.3 1.2-.6 1.8-.8l.6-2.3h2.3l.6 2.3c.6.2 1.2.5 1.8.8l2.1-1.2l1.6 1.6l-1.2 2.1c.3.6.6 1.2.8 1.8l2.3.6v2.3l-2.3.6c-.2.6-.5 1.2-.8 1.8Z" />
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="./assets/icons/lucide-sprite.svg#badge-check"></use>
           </svg>
           <span>SDET</span>
         </a>
@@ -48,8 +47,8 @@
             rel="noopener noreferrer"
             aria-label="LinkedIn"
           >
-            <svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6.9 8.5v9.3H3.8V8.5h3.1ZM5.4 3.6a1.8 1.8 0 1 1 0 3.7a1.8 1.8 0 0 1 0-3.7Zm4.6 4.9h3v1.3h.1c.4-.8 1.5-1.6 3.1-1.6c3.3 0 3.9 2.1 3.9 4.9v4.7h-3.1v-4.2c0-1 0-2.3-1.4-2.3s-1.6 1.1-1.6 2.2v4.3H10V8.5Z" />
+            <svg class="icon" aria-hidden="true">
+              <use href="./assets/icons/lucide-sprite.svg#linkedin"></use>
             </svg>
           </a>
           <a
@@ -59,8 +58,8 @@
             rel="noopener noreferrer"
             aria-label="GitHub"
           >
-            <svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 2.2a9.8 9.8 0 0 0-3.1 19.1c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2c-.5-1.2-1.1-1.5-1.1-1.5c-.9-.6.1-.6.1-.6c1 .1 1.6 1 1.6 1c.9 1.5 2.3 1.1 2.8.8c.1-.7.3-1.1.6-1.4c-2.2-.2-4.6-1.1-4.6-4.9c0-1.1.4-2 .9-2.7c-.1-.2-.4-1.3.1-2.8c0 0 .8-.2 2.8 1a9.7 9.7 0 0 1 5.1 0c2-1.2 2.8-1 2.8-1c.5 1.5.2 2.6.1 2.8c.6.7.9 1.6.9 2.7c0 3.8-2.3 4.7-4.6 4.9c.4.3.7 1 .7 2.1v3.1c0 .3.2.6.7.5A9.8 9.8 0 0 0 12 2.2Z" />
+            <svg class="icon" aria-hidden="true">
+              <use href="./assets/icons/lucide-sprite.svg#github"></use>
             </svg>
           </a>
         </nav>
@@ -163,7 +162,10 @@
           <div class="project-grid">
             <article class="project-card">
               <a class="project-shot" href="./projects/selenium-framework.html" aria-label="Parallel Selenium Platform case study">
-                <img src="./assets/img/work/selenium-java.png" alt="Parallel Selenium automation framework screenshot" />
+                <picture>
+                  <source srcset="./assets/img/generated/work/selenium-java.webp" type="image/webp" />
+                  <img src="./assets/img/work/selenium-java.png" alt="Parallel Selenium automation framework screenshot" />
+                </picture>
               </a>
               <h3>Parallel Selenium Platform</h3>
               <p>Designed a regression platform for parallel web execution in a multi-application enterprise environment.</p>
@@ -178,7 +180,10 @@
 
             <article class="project-card">
               <a class="project-shot" href="./projects/playwright-framework.html" aria-label="Playwright + API Architecture case study">
-                <img src="./assets/img/work/playwright-typescript.png" alt="Playwright automation framework screenshot" />
+                <picture>
+                  <source srcset="./assets/img/generated/work/playwright-typescript.webp" type="image/webp" />
+                  <img src="./assets/img/work/playwright-typescript.png" alt="Playwright automation framework screenshot" />
+                </picture>
               </a>
               <h3>Playwright + API Test Architecture</h3>
               <p>Built a TypeScript-first automation architecture that unifies API and UI flows for integration-heavy features.</p>
@@ -193,7 +198,10 @@
 
             <article class="project-card">
               <a class="project-shot" href="./projects/test-data-engine.html" aria-label="Test Data and Environment Orchestration case study">
-                <img src="./assets/img/work/cypress-typescript2.png" alt="Data-driven automation framework screenshot" />
+                <picture>
+                  <source srcset="./assets/img/generated/work/cypress-typescript.webp" type="image/webp" />
+                  <img src="./assets/img/work/cypress-typescript2.png" alt="Data-driven automation framework screenshot" />
+                </picture>
               </a>
               <h3>Test Data and Environment Orchestration</h3>
               <p>Implemented a data orchestration layer for isolated execution across environments and parallel test streams.</p>
@@ -248,16 +256,14 @@
         <h2>Contact</h2>
         <div class="contact-grid">
           <a class="contact-card" href="mailto:garciaroselln@hotmail.com">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3.5 6.5h17a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z" />
-              <path d="m3 8l9 6l9-6" />
+            <svg class="icon" aria-hidden="true">
+              <use href="./assets/icons/lucide-sprite.svg#mail"></use>
             </svg>
             <span>garciaroselln@hotmail.com</span>
           </a>
           <a class="contact-card" href="tel:+14075382076">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="7.5" y="3.5" width="9" height="17" rx="1.5" />
-              <circle cx="12" cy="17.3" r="0.9" />
+            <svg class="icon" aria-hidden="true">
+              <use href="./assets/icons/lucide-sprite.svg#phone"></use>
             </svg>
             <span>407-538-2076</span>
           </a>

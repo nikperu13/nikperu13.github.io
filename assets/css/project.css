@@ -83,6 +83,7 @@ body {
   overflow: hidden;
 }
 
+.hero-shot picture { display: block; }
 .hero-shot img { width: 100%; display: block; }
 
 .pills,

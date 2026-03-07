@@ -77,7 +77,6 @@ button:focus-visible {
 }
 
 .icon-sm { width: 16px; height: 16px; }
-.icon-fill { fill: currentColor; stroke: none; }
 
 .site-header {
   position: sticky;
@@ -125,15 +124,6 @@ button:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.brand.is-bouncing {
-  animation: brand-pop 480ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes brand-pop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.08); }
-  100% { transform: scale(1); }
-}
-
 .nav-toggle {
   display: none;
   width: 40px;
@@ -395,12 +385,6 @@ button:focus-visible {
   display: inline-block;
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 420ms ease, transform 420ms ease;
-  transition-delay: var(--word-delay, 0ms);
-}
-.section-head.in h2 .title-word {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .card-grid.two {
@@ -503,6 +487,7 @@ button:focus-visible {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
+.project-shot picture { display: block; }
 .project-shot img {
   width: 100%;
   display: block;

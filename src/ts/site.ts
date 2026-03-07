@@ -1,32 +1,32 @@
-/**
- * Portfolio site interaction layer.
- *
- * This file centralizes all non-trivial client-side behavior for the landing
- * page so the HTML can stay declarative and the CSS can stay presentation-only.
- *
- * Current responsibilities:
- * - handle mobile navigation open/close state
- * - keep the sticky nav synced with the section currently in view
- * - render the header scroll progress indicator
- * - attach one-off motion accents (brand pulse, hero parallax, card spotlight)
- * - progressively reveal sections/cards as they enter the viewport
- * - animate impact metrics once they become visible
- *
- * Design constraints:
- * - no framework/runtime dependency
- * - graceful no-op behavior when a target element is missing
- * - reduced-motion users should not get pointer or scroll-driven motion
- * - reveal effects must never leave content hidden if observation fails
- */
+import { animate as animeAnimate, splitText, stagger } from "animejs";
+import gsap from "gsap";
+import { inView, scroll } from "motion";
 
+/**
+ * Main client-side behavior for the portfolio landing page.
+ *
+ * This file intentionally keeps the site in "plain web app" territory:
+ * - HTML owns structure/content
+ * - CSS owns default visual states
+ * - this script wires interaction and motion on top
+ *
+ * Library ownership:
+ * - `motion`: viewport observation and scroll progress
+ * - `gsap`: value tweening and pointer-driven polish
+ * - `animejs`: text splitting and staggered heading reveals
+ *
+ * The goal is to keep interactions declarative from the markup side while
+ * avoiding framework overhead for a mostly static site.
+ */
 type CounterConfig = {
   from: number;
   to: number;
-  format: (v: number) => string;
+  format: (value: number) => string;
 };
 
 (() => {
-  // Respect OS-level reduced-motion preference before attaching visual effects.
+  // Reduced-motion users should still get functional UI without pointer/scroll
+  // driven animation flourishes.
   const prefersReducedMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)",
   ).matches;
@@ -37,12 +37,6 @@ type CounterConfig = {
   const header = document.querySelector<HTMLElement>(".site-header");
   const hero = document.querySelector<HTMLElement>(".hero");
 
-  /**
-   * Navigation behavior:
-   * - toggles the mobile nav tray
-   * - collapses the tray after selecting a link
-   * - keeps `aria-expanded` aligned with the visible state
-   */
   if (navToggle && nav) {
     navToggle.addEventListener("click", () => {
       const isOpen = nav.classList.toggle("open");
@@ -70,15 +64,8 @@ type CounterConfig = {
     );
 
   /**
-   * Updates the active nav link based on a viewport marker rather than the
-   * literal top edge of the window.
-   *
-   * Using a marker below the sticky header produces a better UX: the active
-   * state follows the section a user is actually reading, not the section that
-   * technically starts first in the document flow.
-   *
-   * The fallback branch handles edge cases near the bottom of the page or when
-   * a section is too short to satisfy the main overlap condition.
+   * Marks the nav item for the section currently closest to the user's reading
+   * position rather than relying on the very top edge of the viewport.
    */
   function setActiveLink(): void {
     const headerHeight = header ? header.offsetHeight : 0;
@@ -111,96 +98,107 @@ type CounterConfig = {
     });
   }
 
-  /**
-   * Maps document scroll progress into the thin header progress rail.
-   *
-   * The rail is normalized against the full scrollable height so it stays
-   * accurate regardless of screen size or content length.
-   */
-  function updateProgress(): void {
-    if (!progress) return;
-    const doc = document.documentElement;
-    const scrollable = Math.max(doc.scrollHeight - window.innerHeight, 1);
-    const ratio = Math.min(window.scrollY / scrollable, 1);
-    progress.style.transform = "scaleX(" + ratio.toFixed(3) + ")";
-  }
-
   let ticking = false;
 
   /**
-   * Batches scroll-driven UI updates into a single animation frame.
-   *
-   * This avoids doing multiple layout-sensitive operations for every native
-   * `scroll` event and keeps the nav/progress feedback smooth.
+   * Scroll events can fire very frequently. Batch the nav recalculation into a
+   * single animation frame so the DOM work stays predictable.
    */
   function onScroll(): void {
     if (ticking) return;
     ticking = true;
     window.requestAnimationFrame(() => {
       setActiveLink();
-      updateProgress();
       ticking = false;
     });
   }
 
   setActiveLink();
-  updateProgress();
   window.addEventListener("scroll", onScroll, { passive: true });
 
-  if (brand) {
-    /**
-     * Gives the brand pill a small pulse on click.
-     *
-     * This keeps the header from feeling static without introducing continuous
-     * animation that would compete with the main content.
-     */
-    brand.addEventListener("click", () => {
-      brand.classList.remove("is-bouncing");
-      window.requestAnimationFrame(() => {
-        brand.classList.add("is-bouncing");
-      });
+  if (progress) {
+    // `motion.scroll()` gives a normalized 0..1 value for the full page.
+    scroll((value: number) => {
+      progress.style.transform = "scaleX(" + value.toFixed(3) + ")";
     });
   }
 
-  /**
-   * Splits section headings into per-word spans so CSS can reveal them with a
-   * staggered delay.
-   *
-   * The dataset guard prevents duplicate span-wrapping if the script is re-run
-   * during local development.
-   */
+  if (brand && !prefersReducedMotion) {
+    // Small click accent for the header brand. GSAP handles repeated clicks
+    // more cleanly than a CSS class toggle because we can cancel/restart.
+    brand.addEventListener("click", () => {
+      gsap.killTweensOf(brand);
+      gsap.fromTo(
+        brand,
+        { scale: 1 },
+        {
+          scale: 1.08,
+          duration: 0.24,
+          ease: "power2.out",
+          yoyo: true,
+          repeat: 1,
+          overwrite: true,
+          clearProps: "transform",
+        },
+      );
+    });
+  }
+
+  const titleSplitters = new WeakMap<HTMLElement, HTMLElement[]>();
   const sectionTitles =
     document.querySelectorAll<HTMLElement>(".section-head h2");
+
+  /**
+   * Convert section titles into addressable word nodes once so reveal
+   * animations can be targeted without rebuilding the DOM repeatedly.
+   */
   sectionTitles.forEach((title) => {
     if (title.dataset.splitDone === "true") return;
-    const words = title.textContent?.trim().split(/\s+/) ?? [];
-    title.innerHTML = words
-      .map(
-        (word, idx) =>
-          '<span class="title-word" style="--word-delay:' +
-          idx * 58 +
-          'ms">' +
-          word +
-          "</span>",
-      )
-      .join(" ");
+    const splitter = splitText(title, {
+      words: { class: "title-word" },
+      chars: false,
+      lines: false,
+    });
+    titleSplitters.set(title, splitter.words as HTMLElement[]);
     title.dataset.splitDone = "true";
   });
+
+  function animateSectionTitle(sectionHead: HTMLElement): void {
+    if (sectionHead.dataset.titleAnimated === "true") return;
+    const title = sectionHead.querySelector<HTMLElement>("h2");
+    const words = title ? titleSplitters.get(title) : null;
+    if (!title || !words || words.length === 0) return;
+
+    sectionHead.dataset.titleAnimated = "true";
+
+    if (prefersReducedMotion) {
+      words.forEach((word) => {
+        word.style.opacity = "1";
+        word.style.transform = "none";
+      });
+      return;
+    }
+
+    animeAnimate(words, {
+      translateY: [10, 0],
+      opacity: [0, 1],
+      delay: stagger(58),
+      duration: 420,
+      ease: "outQuad",
+    });
+  }
 
   const impactValues = document.querySelectorAll<HTMLElement>(".impact-value");
 
   /**
-   * Converts the display text from an impact tile into an animation plan.
+   * Supported metric formats are intentionally narrow because the page uses a
+   * small set of copy patterns today.
    *
-   * Supported display formats intentionally match the copy style used on the
-   * page today:
+   * Examples:
    * - `99%`
    * - `~80%`
    * - `6-7x`
    * - `7x`
-   *
-   * Returning `null` keeps the caller safe if a future metric uses a format
-   * that should not be animated.
    */
   function parseCounterText(text: string): CounterConfig | null {
     const clean = text.replace(/\s+/g, "");
@@ -209,7 +207,7 @@ type CounterConfig = {
       return {
         from: 0,
         to: Number(match[1]),
-        format: (v) => (clean.startsWith("~") ? "~" : "") + v + "%",
+        format: (value) => (clean.startsWith("~") ? "~" : "") + value + "%",
       };
     }
 
@@ -220,7 +218,7 @@ type CounterConfig = {
       return {
         from: start,
         to: end,
-        format: (v) => start + "-" + v + "x",
+        format: (value) => start + "-" + value + "x",
       };
     }
 
@@ -229,59 +227,53 @@ type CounterConfig = {
       return {
         from: 0,
         to: Number(match[1]),
-        format: (v) => v + "x",
+        format: (value) => value + "x",
       };
     }
+
     return null;
   }
 
-  /**
-   * Animates a metric tile from its configured start value to its final value.
-   *
-   * The `data-counted` flag ensures each metric runs once. The easing curve is
-   * intentionally front-loaded so the motion feels responsive rather than slow.
-   */
   function animateCounter(el: HTMLElement, config: CounterConfig | null): void {
     if (!config || el.dataset.counted === "true") return;
-    const counterConfig = config;
+
+    // Tween a plain object, then project the rounded value back into the DOM.
+    const state = { value: config.from };
     el.dataset.counted = "true";
-    const duration = 980;
-    const start = performance.now();
     el.classList.add("counting");
 
-    function tick(now: number): void {
-      const progressRatio = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progressRatio, 3);
-      const value = Math.round(
-        counterConfig.from + (counterConfig.to - counterConfig.from) * eased,
-      );
-      el.textContent = counterConfig.format(value);
-      if (progressRatio < 1) {
-        window.requestAnimationFrame(tick);
-      } else {
+    gsap.to(state, {
+      value: config.to,
+      duration: 0.98,
+      ease: "power3.out",
+      overwrite: true,
+      onUpdate: () => {
+        el.textContent = config.format(Math.round(state.value));
+      },
+      onComplete: () => {
+        el.textContent = config.format(config.to);
         el.classList.remove("counting");
-      }
-    }
-
-    window.requestAnimationFrame(tick);
+      },
+    });
   }
 
-  /**
-   * Project card spotlight:
-   * tracks pointer position and feeds CSS custom properties used by the radial
-   * highlight overlay. This is desktop polish only and is skipped for reduced
-   * motion users.
-   */
   const spotlightCards =
     document.querySelectorAll<HTMLElement>(".project-card");
+
   if (!prefersReducedMotion) {
+    // Project cards expose CSS custom properties used by the spotlight overlay.
     spotlightCards.forEach((card) => {
       card.addEventListener("pointermove", (event) => {
         const rect = card.getBoundingClientRect();
         const x = ((event.clientX - rect.left) / rect.width) * 100;
         const y = ((event.clientY - rect.top) / rect.height) * 100;
-        card.style.setProperty("--spot-x", x.toFixed(2) + "%");
-        card.style.setProperty("--spot-y", y.toFixed(2) + "%");
+        gsap.to(card, {
+          "--spot-x": x.toFixed(2) + "%",
+          "--spot-y": y.toFixed(2) + "%",
+          duration: 0.22,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
       });
       card.addEventListener("pointerenter", () => {
         card.classList.add("spotlight-on");
@@ -291,103 +283,100 @@ type CounterConfig = {
       });
     });
 
-    /**
-     * Hero parallax:
-     * shifts the hero glow layers a small amount based on pointer position.
-     * The movement stays intentionally shallow so the effect reads as depth,
-     * not as a hero banner gimmick.
-     */
     if (hero) {
+      // The hero glow layers read these custom properties from CSS.
       hero.addEventListener("pointermove", (event) => {
         const rect = hero.getBoundingClientRect();
         const nx = (event.clientX - rect.left) / rect.width - 0.5;
         const ny = (event.clientY - rect.top) / rect.height - 0.5;
-        hero.style.setProperty("--hero-shift-x", (nx * 18).toFixed(1) + "px");
-        hero.style.setProperty("--hero-shift-y", (ny * 16).toFixed(1) + "px");
+        gsap.to(hero, {
+          "--hero-shift-x": (nx * 18).toFixed(1) + "px",
+          "--hero-shift-y": (ny * 16).toFixed(1) + "px",
+          duration: 0.3,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
       });
       hero.addEventListener("pointerleave", () => {
-        hero.style.setProperty("--hero-shift-x", "0px");
-        hero.style.setProperty("--hero-shift-y", "0px");
+        gsap.to(hero, {
+          "--hero-shift-x": "0px",
+          "--hero-shift-y": "0px",
+          duration: 0.35,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
       });
     }
   }
 
-  /**
-   * Shared reveal targets for "enter once" animation.
-   *
-   * These elements all use the same visibility lifecycle:
-   * hidden in the pending state, revealed once when observed, then left alone.
-   */
   const revealTargets = document.querySelectorAll<HTMLElement>(
     ".card, .panel, .project-card, .role-card, .contact-card, .section-head",
   );
 
-  if ("IntersectionObserver" in window && revealTargets.length > 0) {
-    /**
-     * Reveal observer:
-     * - removes pending state when a target becomes visible
-     * - marks the target as revealed
-     * - starts impact counters for visible metric tiles
-     */
-    const observer = new IntersectionObserver(
-      (entries, obs) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add("in");
-          entry.target.classList.remove("reveal-pending");
-          if (entry.target.classList.contains("impact-tile")) {
-            const valueEl =
-              entry.target.querySelector<HTMLElement>(".impact-value");
-            if (valueEl) {
-              animateCounter(
-                valueEl,
-                parseCounterText(valueEl.textContent ?? ""),
-              );
-            }
-          }
-          obs.unobserve(entry.target);
-        });
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
-    );
+  /**
+   * Shared "reveal once" behavior:
+   * - initial hidden state comes from CSS via `.reveal-pending`
+   * - `motion.inView()` removes the pending state once visible
+   * - section headers additionally trigger word-stagger animation
+   */
+  revealTargets.forEach((el, idx) => {
+    el.classList.add("reveal");
+    el.classList.add("reveal-pending");
+    el.style.setProperty("--reveal-delay", (idx % 6) * 50 + "ms");
 
-    revealTargets.forEach((el, idx) => {
-      el.classList.add("reveal");
-      el.classList.add("reveal-pending");
-      el.style.setProperty("--reveal-delay", (idx % 6) * 50 + "ms");
-      observer.observe(el);
+    inView(
+      el,
+      (element) => {
+        const target = element as HTMLElement;
+        target.classList.add("in");
+        target.classList.remove("reveal-pending");
+        if (target.classList.contains("section-head")) {
+          animateSectionTitle(target);
+        }
+      },
+      { amount: 0.15, margin: "0px 0px -8% 0px" },
+    );
+  });
+
+  impactValues.forEach((value) => {
+    const tile = value.closest<HTMLElement>(".impact-tile");
+    if (!tile) {
+      animateCounter(value, parseCounterText(value.textContent ?? ""));
+      return;
+    }
+
+    tile.classList.add("reveal");
+    tile.classList.add("reveal-pending");
+
+    inView(
+      tile,
+      (element) => {
+        const target = element as HTMLElement;
+        target.classList.add("in");
+        target.classList.remove("reveal-pending");
+        animateCounter(value, parseCounterText(value.textContent ?? ""));
+      },
+      { amount: 0.2, margin: "0px 0px -8% 0px" },
+    );
+  });
+
+  window.setTimeout(() => {
+    // Fail-safe: never leave content hidden if an observer callback is missed.
+    revealTargets.forEach((el) => {
+      if (el.classList.contains("reveal-pending")) {
+        el.classList.remove("reveal-pending");
+        if (el.classList.contains("section-head")) {
+          animateSectionTitle(el);
+        }
+      }
     });
 
     impactValues.forEach((value) => {
       const tile = value.closest<HTMLElement>(".impact-tile");
-      if (tile) {
-        tile.classList.add("reveal");
-        tile.classList.add("reveal-pending");
-        observer.observe(tile);
-      } else {
+      if (tile && tile.classList.contains("reveal-pending")) {
+        tile.classList.remove("reveal-pending");
         animateCounter(value, parseCounterText(value.textContent ?? ""));
       }
     });
-
-    /**
-     * Fail-safe:
-     * if an observer callback is missed because of fast scrolling or layout
-     * timing, remove the pending state anyway so content is never stranded in a
-     * hidden state. Any untouched impact counters are started here as well.
-     */
-    window.setTimeout(() => {
-      revealTargets.forEach((el) => {
-        if (el.classList.contains("reveal-pending")) {
-          el.classList.remove("reveal-pending");
-        }
-      });
-      impactValues.forEach((value) => {
-        const tile = value.closest<HTMLElement>(".impact-tile");
-        if (tile && tile.classList.contains("reveal-pending")) {
-          tile.classList.remove("reveal-pending");
-          animateCounter(value, parseCounterText(value.textContent ?? ""));
-        }
-      });
-    }, 1400);
-  }
+  }, 1400);
 })();
