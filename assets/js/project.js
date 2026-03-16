@@ -1,2979 +1,4 @@
 (() => {
-  // node_modules/animejs/dist/modules/core/consts.js
-  var isBrowser = typeof window !== "undefined";
-  var win = isBrowser ? (
-    /** @type {AnimeJSWindow} */
-    /** @type {unknown} */
-    window
-  ) : null;
-  var doc = isBrowser ? document : null;
-  var tweenTypes = {
-    OBJECT: 0,
-    ATTRIBUTE: 1,
-    CSS: 2,
-    TRANSFORM: 3,
-    CSS_VAR: 4
-  };
-  var valueTypes = {
-    NUMBER: 0,
-    UNIT: 1,
-    COLOR: 2,
-    COMPLEX: 3
-  };
-  var tickModes = {
-    NONE: 0,
-    AUTO: 1,
-    FORCE: 2
-  };
-  var compositionTypes = {
-    replace: 0,
-    none: 1,
-    blend: 2
-  };
-  var isRegisteredTargetSymbol = /* @__PURE__ */ Symbol();
-  var isDomSymbol = /* @__PURE__ */ Symbol();
-  var isSvgSymbol = /* @__PURE__ */ Symbol();
-  var transformsSymbol = /* @__PURE__ */ Symbol();
-  var proxyTargetSymbol = /* @__PURE__ */ Symbol();
-  var minValue = 1e-11;
-  var maxValue = 1e12;
-  var K = 1e3;
-  var maxFps = 240;
-  var emptyString = "";
-  var cssVarPrefix = "var(";
-  var shortTransforms = /* @__PURE__ */ (() => {
-    const map = /* @__PURE__ */ new Map();
-    map.set("x", "translateX");
-    map.set("y", "translateY");
-    map.set("z", "translateZ");
-    return map;
-  })();
-  var validTransforms = [
-    "translateX",
-    "translateY",
-    "translateZ",
-    "rotate",
-    "rotateX",
-    "rotateY",
-    "rotateZ",
-    "scale",
-    "scaleX",
-    "scaleY",
-    "scaleZ",
-    "skew",
-    "skewX",
-    "skewY",
-    "matrix",
-    "matrix3d",
-    "perspective"
-  ];
-  var transformsFragmentStrings = /* @__PURE__ */ validTransforms.reduce((a, v) => ({ ...a, [v]: v + "(" }), {});
-  var noop = () => {
-  };
-  var validRgbHslRgx = /\)\s*[-.\d]/;
-  var hexTestRgx = /(^#([\da-f]{3}){1,2}$)|(^#([\da-f]{4}){1,2}$)/i;
-  var rgbExecRgx = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i;
-  var rgbaExecRgx = /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(-?\d+|-?\d*.\d+)\s*\)/i;
-  var hslExecRgx = /hsl\(\s*(-?\d+|-?\d*.\d+)\s*,\s*(-?\d+|-?\d*.\d+)%\s*,\s*(-?\d+|-?\d*.\d+)%\s*\)/i;
-  var hslaExecRgx = /hsla\(\s*(-?\d+|-?\d*.\d+)\s*,\s*(-?\d+|-?\d*.\d+)%\s*,\s*(-?\d+|-?\d*.\d+)%\s*,\s*(-?\d+|-?\d*.\d+)\s*\)/i;
-  var digitWithExponentRgx = /[-+]?\d*\.?\d+(?:e[-+]?\d)?/gi;
-  var unitsExecRgx = /^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)([a-z]+|%)$/i;
-  var lowerCaseRgx = /([a-z])([A-Z])/g;
-  var transformsExecRgx = /(\w+)(\([^)]+\)+)/g;
-  var relativeValuesExecRgx = /(\*=|\+=|-=)/;
-  var cssVariableMatchRgx = /var\(\s*(--[\w-]+)(?:\s*,\s*([^)]+))?\s*\)/;
-
-  // node_modules/animejs/dist/modules/core/globals.js
-  var defaults = {
-    id: null,
-    keyframes: null,
-    playbackEase: null,
-    playbackRate: 1,
-    frameRate: maxFps,
-    loop: 0,
-    reversed: false,
-    alternate: false,
-    autoplay: true,
-    persist: false,
-    duration: K,
-    delay: 0,
-    loopDelay: 0,
-    ease: "out(2)",
-    composition: compositionTypes.replace,
-    modifier: (v) => v,
-    onBegin: noop,
-    onBeforeUpdate: noop,
-    onUpdate: noop,
-    onLoop: noop,
-    onPause: noop,
-    onComplete: noop,
-    onRender: noop
-  };
-  var scope = {
-    /** @type {Scope} */
-    current: null,
-    /** @type {Document|DOMTarget} */
-    root: doc
-  };
-  var globals = {
-    /** @type {DefaultsParams} */
-    defaults,
-    /** @type {Number} */
-    precision: 4,
-    /** @type {Number} equals 1 in ms mode, 0.001 in s mode */
-    timeScale: 1,
-    /** @type {Number} */
-    tickThreshold: 200
-  };
-  var devTools = isBrowser && win.AnimeJSDevTools;
-  var globalVersions = { version: "4.3.6", engine: null };
-  if (isBrowser) {
-    if (!win.AnimeJS) win.AnimeJS = [];
-    win.AnimeJS.push(globalVersions);
-  }
-
-  // node_modules/animejs/dist/modules/core/helpers.js
-  var toLowerCase = (str) => str.replace(lowerCaseRgx, "$1-$2").toLowerCase();
-  var stringStartsWith = (str, sub) => str.indexOf(sub) === 0;
-  var now = Date.now;
-  var isArr = Array.isArray;
-  var isObj = (a) => a && a.constructor === Object;
-  var isNum = (a) => typeof a === "number" && !isNaN(a);
-  var isStr = (a) => typeof a === "string";
-  var isFnc = (a) => typeof a === "function";
-  var isUnd = (a) => typeof a === "undefined";
-  var isNil = (a) => isUnd(a) || a === null;
-  var isSvg = (a) => isBrowser && a instanceof SVGElement;
-  var isHex = (a) => hexTestRgx.test(a);
-  var isRgb = (a) => stringStartsWith(a, "rgb");
-  var isHsl = (a) => stringStartsWith(a, "hsl");
-  var isCol = (a) => isHex(a) || (isRgb(a) || isHsl(a)) && (a[a.length - 1] === ")" || !validRgbHslRgx.test(a));
-  var isKey = (a) => !globals.defaults.hasOwnProperty(a);
-  var svgCssReservedProperties = ["opacity", "rotate", "overflow", "color"];
-  var isValidSVGAttribute = (el, propertyName) => {
-    if (svgCssReservedProperties.includes(propertyName)) return false;
-    if (el.getAttribute(propertyName) || propertyName in el) {
-      if (propertyName === "scale") {
-        const elParentNode = (
-          /** @type {SVGGeometryElement} */
-          /** @type {DOMTarget} */
-          el.parentNode
-        );
-        return elParentNode && elParentNode.tagName === "filter";
-      }
-      return true;
-    }
-  };
-  var parseNumber = (str) => isStr(str) ? parseFloat(
-    /** @type {String} */
-    str
-  ) : (
-    /** @type {Number} */
-    str
-  );
-  var pow = Math.pow;
-  var sqrt = Math.sqrt;
-  var sin = Math.sin;
-  var cos = Math.cos;
-  var abs = Math.abs;
-  var floor = Math.floor;
-  var asin = Math.asin;
-  var max = Math.max;
-  var PI = Math.PI;
-  var _round = Math.round;
-  var clamp = (v, min, max2) => v < min ? min : v > max2 ? max2 : v;
-  var powCache = {};
-  var round = (v, decimalLength) => {
-    if (decimalLength < 0) return v;
-    if (!decimalLength) return _round(v);
-    let p = powCache[decimalLength];
-    if (!p) p = powCache[decimalLength] = 10 ** decimalLength;
-    return _round(v * p) / p;
-  };
-  var lerp = (start, end, factor) => start + (end - start) * factor;
-  var clampInfinity = (v) => v === Infinity ? maxValue : v === -Infinity ? -maxValue : v;
-  var normalizeTime = (v) => v <= minValue ? minValue : clampInfinity(round(v, 11));
-  var cloneArray = (a) => isArr(a) ? [...a] : a;
-  var mergeObjects = (o1, o2) => {
-    const merged = (
-      /** @type {T & U} */
-      { ...o1 }
-    );
-    for (let p in o2) {
-      const o1p = (
-        /** @type {T & U} */
-        o1[p]
-      );
-      merged[p] = isUnd(o1p) ? (
-        /** @type {T & U} */
-        o2[p]
-      ) : o1p;
-    }
-    return merged;
-  };
-  var forEachChildren = (parent, callback, reverse, prevProp = "_prev", nextProp = "_next") => {
-    let next = parent._head;
-    let adjustedNextProp = nextProp;
-    if (reverse) {
-      next = parent._tail;
-      adjustedNextProp = prevProp;
-    }
-    while (next) {
-      const currentNext = next[adjustedNextProp];
-      callback(next);
-      next = currentNext;
-    }
-  };
-  var removeChild = (parent, child, prevProp = "_prev", nextProp = "_next") => {
-    const prev = child[prevProp];
-    const next = child[nextProp];
-    prev ? prev[nextProp] = next : parent._head = next;
-    next ? next[prevProp] = prev : parent._tail = prev;
-    child[prevProp] = null;
-    child[nextProp] = null;
-  };
-  var addChild = (parent, child, sortMethod, prevProp = "_prev", nextProp = "_next") => {
-    let prev = parent._tail;
-    while (prev && sortMethod && sortMethod(prev, child)) prev = prev[prevProp];
-    const next = prev ? prev[nextProp] : parent._head;
-    prev ? prev[nextProp] = child : parent._head = child;
-    next ? next[prevProp] = child : parent._tail = child;
-    child[prevProp] = prev;
-    child[nextProp] = next;
-  };
-
-  // node_modules/animejs/dist/modules/core/transforms.js
-  var parseInlineTransforms = (target, propName, animationInlineStyles) => {
-    const inlineTransforms = target.style.transform;
-    let inlinedStylesPropertyValue;
-    if (inlineTransforms) {
-      const cachedTransforms = target[transformsSymbol];
-      let t;
-      while (t = transformsExecRgx.exec(inlineTransforms)) {
-        const inlinePropertyName = t[1];
-        const inlinePropertyValue = t[2].slice(1, -1);
-        cachedTransforms[inlinePropertyName] = inlinePropertyValue;
-        if (inlinePropertyName === propName) {
-          inlinedStylesPropertyValue = inlinePropertyValue;
-          if (animationInlineStyles) {
-            animationInlineStyles[propName] = inlinePropertyValue;
-          }
-        }
-      }
-    }
-    return inlineTransforms && !isUnd(inlinedStylesPropertyValue) ? inlinedStylesPropertyValue : stringStartsWith(propName, "scale") ? "1" : stringStartsWith(propName, "rotate") || stringStartsWith(propName, "skew") ? "0deg" : "0px";
-  };
-
-  // node_modules/animejs/dist/modules/core/colors.js
-  var rgbToRgba = (rgbValue) => {
-    const rgba2 = rgbExecRgx.exec(rgbValue) || rgbaExecRgx.exec(rgbValue);
-    const a = !isUnd(rgba2[4]) ? +rgba2[4] : 1;
-    return [
-      +rgba2[1],
-      +rgba2[2],
-      +rgba2[3],
-      a
-    ];
-  };
-  var hexToRgba = (hexValue) => {
-    const hexLength = hexValue.length;
-    const isShort = hexLength === 4 || hexLength === 5;
-    return [
-      +("0x" + hexValue[1] + hexValue[isShort ? 1 : 2]),
-      +("0x" + hexValue[isShort ? 2 : 3] + hexValue[isShort ? 2 : 4]),
-      +("0x" + hexValue[isShort ? 3 : 5] + hexValue[isShort ? 3 : 6]),
-      hexLength === 5 || hexLength === 9 ? +(+("0x" + hexValue[isShort ? 4 : 7] + hexValue[isShort ? 4 : 8]) / 255).toFixed(3) : 1
-    ];
-  };
-  var hue2rgb = (p, q, t) => {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p;
-  };
-  var hslToRgba = (hslValue) => {
-    const hsla2 = hslExecRgx.exec(hslValue) || hslaExecRgx.exec(hslValue);
-    const h = +hsla2[1] / 360;
-    const s = +hsla2[2] / 100;
-    const l = +hsla2[3] / 100;
-    const a = !isUnd(hsla2[4]) ? +hsla2[4] : 1;
-    let r, g, b;
-    if (s === 0) {
-      r = g = b = l;
-    } else {
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      r = round(hue2rgb(p, q, h + 1 / 3) * 255, 0);
-      g = round(hue2rgb(p, q, h) * 255, 0);
-      b = round(hue2rgb(p, q, h - 1 / 3) * 255, 0);
-    }
-    return [r, g, b, a];
-  };
-  var convertColorStringValuesToRgbaArray = (colorString) => {
-    return isRgb(colorString) ? rgbToRgba(colorString) : isHex(colorString) ? hexToRgba(colorString) : isHsl(colorString) ? hslToRgba(colorString) : [0, 0, 0, 1];
-  };
-
-  // node_modules/animejs/dist/modules/core/values.js
-  var setValue = (targetValue, defaultValue) => {
-    return isUnd(targetValue) ? defaultValue : targetValue;
-  };
-  var getFunctionValue = (value, target, index, total, store) => {
-    let func;
-    if (isFnc(value)) {
-      func = () => {
-        const computed = (
-          /** @type {Function} */
-          value(target, index, total)
-        );
-        return !isNaN(+computed) ? +computed : computed || 0;
-      };
-    } else if (isStr(value) && stringStartsWith(value, cssVarPrefix)) {
-      func = () => {
-        const match = value.match(cssVariableMatchRgx);
-        const cssVarName = match[1];
-        const fallbackValue = match[2];
-        let computed = getComputedStyle(
-          /** @type {HTMLElement} */
-          target
-        )?.getPropertyValue(cssVarName);
-        if ((!computed || computed.trim() === emptyString) && fallbackValue) {
-          computed = fallbackValue.trim();
-        }
-        return computed || 0;
-      };
-    } else {
-      return value;
-    }
-    if (store) store.func = func;
-    return func();
-  };
-  var getTweenType = (target, prop) => {
-    return !target[isDomSymbol] ? tweenTypes.OBJECT : (
-      // Handle SVG attributes
-      target[isSvgSymbol] && isValidSVGAttribute(target, prop) ? tweenTypes.ATTRIBUTE : (
-        // Handle CSS Transform properties differently than CSS to allow individual animations
-        validTransforms.includes(prop) || shortTransforms.get(prop) ? tweenTypes.TRANSFORM : (
-          // CSS variables
-          stringStartsWith(prop, "--") ? tweenTypes.CSS_VAR : (
-            // All other CSS properties
-            prop in /** @type {DOMTarget} */
-            target.style ? tweenTypes.CSS : (
-              // Handle other DOM Attributes
-              prop in target ? tweenTypes.OBJECT : tweenTypes.ATTRIBUTE
-            )
-          )
-        )
-      )
-    );
-  };
-  var getCSSValue = (target, propName, animationInlineStyles) => {
-    const inlineStyles = target.style[propName];
-    if (inlineStyles && animationInlineStyles) {
-      animationInlineStyles[propName] = inlineStyles;
-    }
-    const value = inlineStyles || getComputedStyle(target[proxyTargetSymbol] || target).getPropertyValue(propName);
-    return value === "auto" ? "0" : value;
-  };
-  var getOriginalAnimatableValue = (target, propName, tweenType, animationInlineStyles) => {
-    const type = !isUnd(tweenType) ? tweenType : getTweenType(target, propName);
-    return type === tweenTypes.OBJECT ? target[propName] || 0 : type === tweenTypes.ATTRIBUTE ? (
-      /** @type {DOMTarget} */
-      target.getAttribute(propName)
-    ) : type === tweenTypes.TRANSFORM ? parseInlineTransforms(
-      /** @type {DOMTarget} */
-      target,
-      propName,
-      animationInlineStyles
-    ) : type === tweenTypes.CSS_VAR ? getCSSValue(
-      /** @type {DOMTarget} */
-      target,
-      propName,
-      animationInlineStyles
-    ).trimStart() : getCSSValue(
-      /** @type {DOMTarget} */
-      target,
-      propName,
-      animationInlineStyles
-    );
-  };
-  var getRelativeValue = (x, y, operator) => {
-    return operator === "-" ? x - y : operator === "+" ? x + y : x * y;
-  };
-  var createDecomposedValueTargetObject = () => {
-    return {
-      /** @type {valueTypes} */
-      t: valueTypes.NUMBER,
-      n: 0,
-      u: null,
-      o: null,
-      d: null,
-      s: null
-    };
-  };
-  var decomposeRawValue = (rawValue, targetObject) => {
-    targetObject.t = valueTypes.NUMBER;
-    targetObject.n = 0;
-    targetObject.u = null;
-    targetObject.o = null;
-    targetObject.d = null;
-    targetObject.s = null;
-    if (!rawValue) return targetObject;
-    const num = +rawValue;
-    if (!isNaN(num)) {
-      targetObject.n = num;
-      return targetObject;
-    } else {
-      let str = (
-        /** @type {String} */
-        rawValue
-      );
-      if (str[1] === "=") {
-        targetObject.o = str[0];
-        str = str.slice(2);
-      }
-      const unitMatch = str.includes(" ") ? false : unitsExecRgx.exec(str);
-      if (unitMatch) {
-        targetObject.t = valueTypes.UNIT;
-        targetObject.n = +unitMatch[1];
-        targetObject.u = unitMatch[2];
-        return targetObject;
-      } else if (targetObject.o) {
-        targetObject.n = +str;
-        return targetObject;
-      } else if (isCol(str)) {
-        targetObject.t = valueTypes.COLOR;
-        targetObject.d = convertColorStringValuesToRgbaArray(str);
-        return targetObject;
-      } else {
-        const matchedNumbers = str.match(digitWithExponentRgx);
-        targetObject.t = valueTypes.COMPLEX;
-        targetObject.d = matchedNumbers ? matchedNumbers.map(Number) : [];
-        targetObject.s = str.split(digitWithExponentRgx) || [];
-        return targetObject;
-      }
-    }
-  };
-  var decomposeTweenValue = (tween, targetObject) => {
-    targetObject.t = tween._valueType;
-    targetObject.n = tween._toNumber;
-    targetObject.u = tween._unit;
-    targetObject.o = null;
-    targetObject.d = cloneArray(tween._toNumbers);
-    targetObject.s = cloneArray(tween._strings);
-    return targetObject;
-  };
-  var decomposedOriginalValue = createDecomposedValueTargetObject();
-
-  // node_modules/animejs/dist/modules/core/render.js
-  var render = (tickable, time, muteCallbacks, internalRender, tickMode) => {
-    const parent = tickable.parent;
-    const duration = tickable.duration;
-    const completed = tickable.completed;
-    const iterationDuration = tickable.iterationDuration;
-    const iterationCount = tickable.iterationCount;
-    const _currentIteration = tickable._currentIteration;
-    const _loopDelay = tickable._loopDelay;
-    const _reversed = tickable._reversed;
-    const _alternate = tickable._alternate;
-    const _hasChildren = tickable._hasChildren;
-    const tickableDelay = tickable._delay;
-    const tickablePrevAbsoluteTime = tickable._currentTime;
-    const tickableEndTime = tickableDelay + iterationDuration;
-    const tickableAbsoluteTime = time - tickableDelay;
-    const tickablePrevTime = clamp(tickablePrevAbsoluteTime, -tickableDelay, duration);
-    const tickableCurrentTime = clamp(tickableAbsoluteTime, -tickableDelay, duration);
-    const deltaTime = tickableAbsoluteTime - tickablePrevAbsoluteTime;
-    const isCurrentTimeAboveZero = tickableCurrentTime > 0;
-    const isCurrentTimeEqualOrAboveDuration = tickableCurrentTime >= duration;
-    const isSetter = duration <= minValue;
-    const forcedTick = tickMode === tickModes.FORCE;
-    let isOdd = 0;
-    let iterationElapsedTime = tickableAbsoluteTime;
-    let hasRendered = 0;
-    if (iterationCount > 1) {
-      const currentIteration = ~~(tickableCurrentTime / (iterationDuration + (isCurrentTimeEqualOrAboveDuration ? 0 : _loopDelay)));
-      tickable._currentIteration = clamp(currentIteration, 0, iterationCount);
-      if (isCurrentTimeEqualOrAboveDuration) tickable._currentIteration--;
-      isOdd = tickable._currentIteration % 2;
-      iterationElapsedTime = tickableCurrentTime % (iterationDuration + _loopDelay) || 0;
-    }
-    const isReversed = _reversed ^ (_alternate && isOdd);
-    const _ease = (
-      /** @type {Renderable} */
-      tickable._ease
-    );
-    let iterationTime = isCurrentTimeEqualOrAboveDuration ? isReversed ? 0 : duration : isReversed ? iterationDuration - iterationElapsedTime : iterationElapsedTime;
-    if (_ease) iterationTime = iterationDuration * _ease(iterationTime / iterationDuration) || 0;
-    const isRunningBackwards = (parent ? parent.backwards : tickableAbsoluteTime < tickablePrevAbsoluteTime) ? !isReversed : !!isReversed;
-    tickable._currentTime = tickableAbsoluteTime;
-    tickable._iterationTime = iterationTime;
-    tickable.backwards = isRunningBackwards;
-    if (isCurrentTimeAboveZero && !tickable.began) {
-      tickable.began = true;
-      if (!muteCallbacks && !(parent && (isRunningBackwards || !parent.began))) {
-        tickable.onBegin(
-          /** @type {CallbackArgument} */
-          tickable
-        );
-      }
-    } else if (tickableAbsoluteTime <= 0) {
-      tickable.began = false;
-    }
-    if (!muteCallbacks && !_hasChildren && isCurrentTimeAboveZero && tickable._currentIteration !== _currentIteration) {
-      tickable.onLoop(
-        /** @type {CallbackArgument} */
-        tickable
-      );
-    }
-    if (forcedTick || tickMode === tickModes.AUTO && (time >= tickableDelay && time <= tickableEndTime || // Normal render
-    time <= tickableDelay && tickablePrevTime > tickableDelay || // Playhead is before the animation start time so make sure the animation is at its initial state
-    time >= tickableEndTime && tickablePrevTime !== duration) || iterationTime >= tickableEndTime && tickablePrevTime !== duration || iterationTime <= tickableDelay && tickablePrevTime > 0 || time <= tickablePrevTime && tickablePrevTime === duration && completed || // Force a render if a seek occurs on an completed animation
-    isCurrentTimeEqualOrAboveDuration && !completed && isSetter) {
-      if (isCurrentTimeAboveZero) {
-        tickable.computeDeltaTime(tickablePrevTime);
-        if (!muteCallbacks) tickable.onBeforeUpdate(
-          /** @type {CallbackArgument} */
-          tickable
-        );
-      }
-      if (!_hasChildren) {
-        const forcedRender = forcedTick || (isRunningBackwards ? deltaTime * -1 : deltaTime) >= globals.tickThreshold;
-        const absoluteTime = tickable._offset + (parent ? parent._offset : 0) + tickableDelay + iterationTime;
-        let tween = (
-          /** @type {Tween} */
-          /** @type {JSAnimation} */
-          tickable._head
-        );
-        let tweenTarget;
-        let tweenStyle;
-        let tweenTargetTransforms;
-        let tweenTargetTransformsProperties;
-        let tweenTransformsNeedUpdate = 0;
-        while (tween) {
-          const tweenComposition = tween._composition;
-          const tweenCurrentTime = tween._currentTime;
-          const tweenChangeDuration = tween._changeDuration;
-          const tweenAbsEndTime = tween._absoluteStartTime + tween._changeDuration;
-          const tweenNextRep = tween._nextRep;
-          const tweenPrevRep = tween._prevRep;
-          const tweenHasComposition = tweenComposition !== compositionTypes.none;
-          if ((forcedRender || (tweenCurrentTime !== tweenChangeDuration || absoluteTime <= tweenAbsEndTime + (tweenNextRep ? tweenNextRep._delay : 0)) && (tweenCurrentTime !== 0 || absoluteTime >= tween._absoluteStartTime)) && (!tweenHasComposition || !tween._isOverridden && (!tween._isOverlapped || absoluteTime <= tweenAbsEndTime) && (!tweenNextRep || (tweenNextRep._isOverridden || absoluteTime <= tweenNextRep._absoluteStartTime)) && (!tweenPrevRep || (tweenPrevRep._isOverridden || absoluteTime >= tweenPrevRep._absoluteStartTime + tweenPrevRep._changeDuration + tween._delay)))) {
-            const tweenNewTime = tween._currentTime = clamp(iterationTime - tween._startTime, 0, tweenChangeDuration);
-            const tweenProgress = tween._ease(tweenNewTime / tween._updateDuration);
-            const tweenModifier = tween._modifier;
-            const tweenValueType = tween._valueType;
-            const tweenType = tween._tweenType;
-            const tweenIsObject = tweenType === tweenTypes.OBJECT;
-            const tweenIsNumber = tweenValueType === valueTypes.NUMBER;
-            const tweenPrecision = tweenIsNumber && tweenIsObject || tweenProgress === 0 || tweenProgress === 1 ? -1 : globals.precision;
-            let value;
-            let number2;
-            if (tweenIsNumber) {
-              value = number2 = /** @type {Number} */
-              tweenModifier(round(lerp(tween._fromNumber, tween._toNumber, tweenProgress), tweenPrecision));
-            } else if (tweenValueType === valueTypes.UNIT) {
-              number2 = /** @type {Number} */
-              tweenModifier(round(lerp(tween._fromNumber, tween._toNumber, tweenProgress), tweenPrecision));
-              value = `${number2}${tween._unit}`;
-            } else if (tweenValueType === valueTypes.COLOR) {
-              const fn = tween._fromNumbers;
-              const tn = tween._toNumbers;
-              const r = round(clamp(
-                /** @type {Number} */
-                tweenModifier(lerp(fn[0], tn[0], tweenProgress)),
-                0,
-                255
-              ), 0);
-              const g = round(clamp(
-                /** @type {Number} */
-                tweenModifier(lerp(fn[1], tn[1], tweenProgress)),
-                0,
-                255
-              ), 0);
-              const b = round(clamp(
-                /** @type {Number} */
-                tweenModifier(lerp(fn[2], tn[2], tweenProgress)),
-                0,
-                255
-              ), 0);
-              const a = clamp(
-                /** @type {Number} */
-                tweenModifier(round(lerp(fn[3], tn[3], tweenProgress), tweenPrecision)),
-                0,
-                1
-              );
-              value = `rgba(${r},${g},${b},${a})`;
-              if (tweenHasComposition) {
-                const ns = tween._numbers;
-                ns[0] = r;
-                ns[1] = g;
-                ns[2] = b;
-                ns[3] = a;
-              }
-            } else if (tweenValueType === valueTypes.COMPLEX) {
-              value = tween._strings[0];
-              for (let j = 0, l = tween._toNumbers.length; j < l; j++) {
-                const n = (
-                  /** @type {Number} */
-                  tweenModifier(round(lerp(tween._fromNumbers[j], tween._toNumbers[j], tweenProgress), tweenPrecision))
-                );
-                const s = tween._strings[j + 1];
-                value += `${s ? n + s : n}`;
-                if (tweenHasComposition) {
-                  tween._numbers[j] = n;
-                }
-              }
-            }
-            if (tweenHasComposition) {
-              tween._number = number2;
-            }
-            if (!internalRender && tweenComposition !== compositionTypes.blend) {
-              const tweenProperty = tween.property;
-              tweenTarget = tween.target;
-              if (tweenIsObject) {
-                tweenTarget[tweenProperty] = value;
-              } else if (tweenType === tweenTypes.ATTRIBUTE) {
-                tweenTarget.setAttribute(
-                  tweenProperty,
-                  /** @type {String} */
-                  value
-                );
-              } else {
-                tweenStyle = /** @type {DOMTarget} */
-                tweenTarget.style;
-                if (tweenType === tweenTypes.TRANSFORM) {
-                  if (tweenTarget !== tweenTargetTransforms) {
-                    tweenTargetTransforms = tweenTarget;
-                    tweenTargetTransformsProperties = tweenTarget[transformsSymbol];
-                  }
-                  tweenTargetTransformsProperties[tweenProperty] = value;
-                  tweenTransformsNeedUpdate = 1;
-                } else if (tweenType === tweenTypes.CSS) {
-                  tweenStyle[tweenProperty] = value;
-                } else if (tweenType === tweenTypes.CSS_VAR) {
-                  tweenStyle.setProperty(
-                    tweenProperty,
-                    /** @type {String} */
-                    value
-                  );
-                }
-              }
-              if (isCurrentTimeAboveZero) hasRendered = 1;
-            } else {
-              tween._value = value;
-            }
-          }
-          if (tweenTransformsNeedUpdate && tween._renderTransforms) {
-            let str = emptyString;
-            for (let key2 in tweenTargetTransformsProperties) {
-              str += `${transformsFragmentStrings[key2]}${tweenTargetTransformsProperties[key2]}) `;
-            }
-            tweenStyle.transform = str;
-            tweenTransformsNeedUpdate = 0;
-          }
-          tween = tween._next;
-        }
-        if (!muteCallbacks && hasRendered) {
-          tickable.onRender(
-            /** @type {JSAnimation} */
-            tickable
-          );
-        }
-      }
-      if (!muteCallbacks && isCurrentTimeAboveZero) {
-        tickable.onUpdate(
-          /** @type {CallbackArgument} */
-          tickable
-        );
-      }
-    }
-    if (parent && isSetter) {
-      if (!muteCallbacks && // (tickableAbsoluteTime > 0 instead) of (tickableAbsoluteTime >= duration) to prevent floating point precision issues
-      // see: https://github.com/juliangarnier/anime/issues/1088
-      (parent.began && !isRunningBackwards && tickableAbsoluteTime > 0 && !completed || isRunningBackwards && tickableAbsoluteTime <= minValue && completed)) {
-        tickable.onComplete(
-          /** @type {CallbackArgument} */
-          tickable
-        );
-        tickable.completed = !isRunningBackwards;
-      }
-    } else if (isCurrentTimeAboveZero && isCurrentTimeEqualOrAboveDuration) {
-      if (iterationCount === Infinity) {
-        tickable._startTime += tickable.duration;
-      } else if (tickable._currentIteration >= iterationCount - 1) {
-        tickable.paused = true;
-        if (!completed && !_hasChildren) {
-          tickable.completed = true;
-          if (!muteCallbacks && !(parent && (isRunningBackwards || !parent.began))) {
-            tickable.onComplete(
-              /** @type {CallbackArgument} */
-              tickable
-            );
-            tickable._resolve(
-              /** @type {CallbackArgument} */
-              tickable
-            );
-          }
-        }
-      }
-    } else {
-      tickable.completed = false;
-    }
-    return hasRendered;
-  };
-  var tick = (tickable, time, muteCallbacks, internalRender, tickMode) => {
-    const _currentIteration = tickable._currentIteration;
-    render(tickable, time, muteCallbacks, internalRender, tickMode);
-    if (tickable._hasChildren) {
-      const tl = (
-        /** @type {Timeline} */
-        tickable
-      );
-      const tlIsRunningBackwards = tl.backwards;
-      const tlChildrenTime = internalRender ? time : tl._iterationTime;
-      const tlCildrenTickTime = now();
-      let tlChildrenHasRendered = 0;
-      let tlChildrenHaveCompleted = true;
-      if (!internalRender && tl._currentIteration !== _currentIteration) {
-        const tlIterationDuration = tl.iterationDuration;
-        forEachChildren(tl, (child) => {
-          if (!tlIsRunningBackwards) {
-            if (!child.completed && !child.backwards && child._currentTime < child.iterationDuration) {
-              render(child, tlIterationDuration, muteCallbacks, 1, tickModes.FORCE);
-            }
-            child.began = false;
-            child.completed = false;
-          } else {
-            const childDuration = child.duration;
-            const childStartTime = child._offset + child._delay;
-            const childEndTime = childStartTime + childDuration;
-            if (!muteCallbacks && childDuration <= minValue && (!childStartTime || childEndTime === tlIterationDuration)) {
-              child.onComplete(child);
-            }
-          }
-        });
-        if (!muteCallbacks) tl.onLoop(
-          /** @type {CallbackArgument} */
-          tl
-        );
-      }
-      forEachChildren(tl, (child) => {
-        const childTime = round((tlChildrenTime - child._offset) * child._speed, 12);
-        const childTickMode = child._fps < tl._fps ? child.requestTick(tlCildrenTickTime) : tickMode;
-        tlChildrenHasRendered += render(child, childTime, muteCallbacks, internalRender, childTickMode);
-        if (!child.completed && tlChildrenHaveCompleted) tlChildrenHaveCompleted = false;
-      }, tlIsRunningBackwards);
-      if (!muteCallbacks && tlChildrenHasRendered) tl.onRender(
-        /** @type {CallbackArgument} */
-        tl
-      );
-      if ((tlChildrenHaveCompleted || tlIsRunningBackwards) && tl._currentTime >= tl.duration) {
-        tl.paused = true;
-        if (!tl.completed) {
-          tl.completed = true;
-          if (!muteCallbacks) {
-            tl.onComplete(
-              /** @type {CallbackArgument} */
-              tl
-            );
-            tl._resolve(
-              /** @type {CallbackArgument} */
-              tl
-            );
-          }
-        }
-      }
-    }
-  };
-
-  // node_modules/animejs/dist/modules/core/styles.js
-  var propertyNamesCache = {};
-  var sanitizePropertyName = (propertyName, target, tweenType) => {
-    if (tweenType === tweenTypes.TRANSFORM) {
-      const t = shortTransforms.get(propertyName);
-      return t ? t : propertyName;
-    } else if (tweenType === tweenTypes.CSS || // Handle special cases where properties like "strokeDashoffset" needs to be set as "stroke-dashoffset"
-    // but properties like "baseFrequency" should stay in lowerCamelCase
-    tweenType === tweenTypes.ATTRIBUTE && (isSvg(target) && propertyName in /** @type {DOMTarget} */
-    target.style)) {
-      const cachedPropertyName = propertyNamesCache[propertyName];
-      if (cachedPropertyName) {
-        return cachedPropertyName;
-      } else {
-        const lowerCaseName = propertyName ? toLowerCase(propertyName) : propertyName;
-        propertyNamesCache[propertyName] = lowerCaseName;
-        return lowerCaseName;
-      }
-    } else {
-      return propertyName;
-    }
-  };
-  var cleanInlineStyles = (renderable) => {
-    if (renderable._hasChildren) {
-      forEachChildren(renderable, cleanInlineStyles, true);
-    } else {
-      const animation = (
-        /** @type {JSAnimation} */
-        renderable
-      );
-      animation.pause();
-      forEachChildren(animation, (tween) => {
-        const tweenProperty = tween.property;
-        const tweenTarget = tween.target;
-        if (tweenTarget[isDomSymbol]) {
-          const targetStyle = (
-            /** @type {DOMTarget} */
-            tweenTarget.style
-          );
-          const originalInlinedValue = tween._inlineValue;
-          const tweenHadNoInlineValue = isNil(originalInlinedValue) || originalInlinedValue === emptyString;
-          if (tween._tweenType === tweenTypes.TRANSFORM) {
-            const cachedTransforms = tweenTarget[transformsSymbol];
-            if (tweenHadNoInlineValue) {
-              delete cachedTransforms[tweenProperty];
-            } else {
-              cachedTransforms[tweenProperty] = originalInlinedValue;
-            }
-            if (tween._renderTransforms) {
-              if (!Object.keys(cachedTransforms).length) {
-                targetStyle.removeProperty("transform");
-              } else {
-                let str = emptyString;
-                for (let key2 in cachedTransforms) {
-                  str += transformsFragmentStrings[key2] + cachedTransforms[key2] + ") ";
-                }
-                targetStyle.transform = str;
-              }
-            }
-          } else {
-            if (tweenHadNoInlineValue) {
-              targetStyle.removeProperty(toLowerCase(tweenProperty));
-            } else {
-              targetStyle[tweenProperty] = originalInlinedValue;
-            }
-          }
-          if (animation._tail === tween) {
-            animation.targets.forEach((t) => {
-              if (t.getAttribute && t.getAttribute("style") === emptyString) {
-                t.removeAttribute("style");
-              }
-            });
-          }
-        }
-      });
-    }
-    return renderable;
-  };
-
-  // node_modules/animejs/dist/modules/core/clock.js
-  var Clock = class {
-    /** @param {Number} [initTime] */
-    constructor(initTime = 0) {
-      this.deltaTime = 0;
-      this._currentTime = initTime;
-      this._lastTickTime = initTime;
-      this._startTime = initTime;
-      this._lastTime = initTime;
-      this._scheduledTime = 0;
-      this._frameDuration = K / maxFps;
-      this._fps = maxFps;
-      this._speed = 1;
-      this._hasChildren = false;
-      this._head = null;
-      this._tail = null;
-    }
-    get fps() {
-      return this._fps;
-    }
-    set fps(frameRate) {
-      const previousFrameDuration = this._frameDuration;
-      const fr = +frameRate;
-      const fps = fr < minValue ? minValue : fr;
-      const frameDuration = K / fps;
-      if (fps > defaults.frameRate) defaults.frameRate = fps;
-      this._fps = fps;
-      this._frameDuration = frameDuration;
-      this._scheduledTime += frameDuration - previousFrameDuration;
-    }
-    get speed() {
-      return this._speed;
-    }
-    set speed(playbackRate) {
-      const pbr = +playbackRate;
-      this._speed = pbr < minValue ? minValue : pbr;
-    }
-    /**
-     * @param  {Number} time
-     * @return {tickModes}
-     */
-    requestTick(time) {
-      const scheduledTime = this._scheduledTime;
-      this._lastTickTime = time;
-      if (time < scheduledTime) return tickModes.NONE;
-      const frameDuration = this._frameDuration;
-      const frameDelta = time - scheduledTime;
-      this._scheduledTime += frameDelta < frameDuration ? frameDuration : frameDelta;
-      return tickModes.AUTO;
-    }
-    /**
-     * @param  {Number} time
-     * @return {Number}
-     */
-    computeDeltaTime(time) {
-      const delta = time - this._lastTime;
-      this.deltaTime = delta;
-      this._lastTime = time;
-      return delta;
-    }
-  };
-
-  // node_modules/animejs/dist/modules/animation/additive.js
-  var additive = {
-    animation: null,
-    update: noop
-  };
-  var addAdditiveAnimation = (lookups2) => {
-    let animation = additive.animation;
-    if (!animation) {
-      animation = {
-        duration: minValue,
-        computeDeltaTime: noop,
-        _offset: 0,
-        _delay: 0,
-        _head: null,
-        _tail: null
-      };
-      additive.animation = animation;
-      additive.update = () => {
-        lookups2.forEach((propertyAnimation) => {
-          for (let propertyName in propertyAnimation) {
-            const tweens = propertyAnimation[propertyName];
-            const lookupTween = tweens._head;
-            if (lookupTween) {
-              const valueType = lookupTween._valueType;
-              const additiveValues = valueType === valueTypes.COMPLEX || valueType === valueTypes.COLOR ? cloneArray(lookupTween._fromNumbers) : null;
-              let additiveValue = lookupTween._fromNumber;
-              let tween = tweens._tail;
-              while (tween && tween !== lookupTween) {
-                if (additiveValues) {
-                  for (let i = 0, l = tween._numbers.length; i < l; i++) additiveValues[i] += tween._numbers[i];
-                } else {
-                  additiveValue += tween._number;
-                }
-                tween = tween._prevAdd;
-              }
-              lookupTween._toNumber = additiveValue;
-              lookupTween._toNumbers = additiveValues;
-            }
-          }
-        });
-        render(animation, 1, 1, 0, tickModes.FORCE);
-      };
-    }
-    return animation;
-  };
-
-  // node_modules/animejs/dist/modules/engine/engine.js
-  var engineTickMethod = /* @__PURE__ */ (() => isBrowser ? requestAnimationFrame : setImmediate)();
-  var engineCancelMethod = /* @__PURE__ */ (() => isBrowser ? cancelAnimationFrame : clearImmediate)();
-  var Engine = class extends Clock {
-    /** @param {Number} [initTime] */
-    constructor(initTime) {
-      super(initTime);
-      this.useDefaultMainLoop = true;
-      this.pauseOnDocumentHidden = true;
-      this.defaults = defaults;
-      this.paused = true;
-      this.reqId = 0;
-    }
-    update() {
-      const time = this._currentTime = now();
-      if (this.requestTick(time)) {
-        this.computeDeltaTime(time);
-        const engineSpeed = this._speed;
-        const engineFps = this._fps;
-        let activeTickable = (
-          /** @type {Tickable} */
-          this._head
-        );
-        while (activeTickable) {
-          const nextTickable = activeTickable._next;
-          if (!activeTickable.paused) {
-            tick(
-              activeTickable,
-              (time - activeTickable._startTime) * activeTickable._speed * engineSpeed,
-              0,
-              // !muteCallbacks
-              0,
-              // !internalRender
-              activeTickable._fps < engineFps ? activeTickable.requestTick(time) : tickModes.AUTO
-            );
-          } else {
-            removeChild(this, activeTickable);
-            this._hasChildren = !!this._tail;
-            activeTickable._running = false;
-            if (activeTickable.completed && !activeTickable._cancelled) {
-              activeTickable.cancel();
-            }
-          }
-          activeTickable = nextTickable;
-        }
-        additive.update();
-      }
-    }
-    wake() {
-      if (this.useDefaultMainLoop && !this.reqId) {
-        this.requestTick(now());
-        this.reqId = engineTickMethod(tickEngine);
-      }
-      return this;
-    }
-    pause() {
-      if (!this.reqId) return;
-      this.paused = true;
-      return killEngine();
-    }
-    resume() {
-      if (!this.paused) return;
-      this.paused = false;
-      forEachChildren(this, (child) => child.resetTime());
-      return this.wake();
-    }
-    // Getter and setter for speed
-    get speed() {
-      return this._speed * (globals.timeScale === 1 ? 1 : K);
-    }
-    set speed(playbackRate) {
-      this._speed = playbackRate * globals.timeScale;
-      forEachChildren(this, (child) => child.speed = child._speed);
-    }
-    // Getter and setter for timeUnit
-    get timeUnit() {
-      return globals.timeScale === 1 ? "ms" : "s";
-    }
-    set timeUnit(unit) {
-      const secondsScale = 1e-3;
-      const isSecond = unit === "s";
-      const newScale = isSecond ? secondsScale : 1;
-      if (globals.timeScale !== newScale) {
-        globals.timeScale = newScale;
-        globals.tickThreshold = 200 * newScale;
-        const scaleFactor = isSecond ? secondsScale : K;
-        this.defaults.duration *= scaleFactor;
-        this._speed *= scaleFactor;
-      }
-    }
-    // Getter and setter for precision
-    get precision() {
-      return globals.precision;
-    }
-    set precision(precision) {
-      globals.precision = precision;
-    }
-  };
-  var engine = /* @__PURE__ */ (() => {
-    const engine2 = new Engine(now());
-    if (isBrowser) {
-      globalVersions.engine = engine2;
-      doc.addEventListener("visibilitychange", () => {
-        if (!engine2.pauseOnDocumentHidden) return;
-        doc.hidden ? engine2.pause() : engine2.resume();
-      });
-    }
-    return engine2;
-  })();
-  var tickEngine = () => {
-    if (engine._head) {
-      engine.reqId = engineTickMethod(tickEngine);
-      engine.update();
-    } else {
-      engine.reqId = 0;
-    }
-  };
-  var killEngine = () => {
-    engineCancelMethod(
-      /** @type {NodeJS.Immediate & Number} */
-      engine.reqId
-    );
-    engine.reqId = 0;
-    return engine;
-  };
-
-  // node_modules/animejs/dist/modules/animation/composition.js
-  var lookups = {
-    /** @type {TweenReplaceLookups} */
-    _rep: /* @__PURE__ */ new WeakMap(),
-    /** @type {TweenAdditiveLookups} */
-    _add: /* @__PURE__ */ new Map()
-  };
-  var getTweenSiblings = (target, property, lookup = "_rep") => {
-    const lookupMap = lookups[lookup];
-    let targetLookup = lookupMap.get(target);
-    if (!targetLookup) {
-      targetLookup = {};
-      lookupMap.set(target, targetLookup);
-    }
-    return targetLookup[property] ? targetLookup[property] : targetLookup[property] = {
-      _head: null,
-      _tail: null
-    };
-  };
-  var addTweenSortMethod = (p, c) => {
-    return p._isOverridden || p._absoluteStartTime > c._absoluteStartTime;
-  };
-  var overrideTween = (tween) => {
-    tween._isOverlapped = 1;
-    tween._isOverridden = 1;
-    tween._changeDuration = minValue;
-    tween._currentTime = minValue;
-  };
-  var composeTween = (tween, siblings) => {
-    const tweenCompositionType = tween._composition;
-    if (tweenCompositionType === compositionTypes.replace) {
-      const tweenAbsStartTime = tween._absoluteStartTime;
-      addChild(siblings, tween, addTweenSortMethod, "_prevRep", "_nextRep");
-      const prevSibling = tween._prevRep;
-      if (prevSibling) {
-        const prevParent = prevSibling.parent;
-        const prevAbsEndTime = prevSibling._absoluteStartTime + prevSibling._changeDuration;
-        if (
-          // Check if the previous tween is from a different animation
-          tween.parent.id !== prevParent.id && // Check if the animation has loops
-          prevParent.iterationCount > 1 && // Check if _absoluteChangeEndTime of last loop overlaps the current tween
-          prevAbsEndTime + (prevParent.duration - prevParent.iterationDuration) > tweenAbsStartTime
-        ) {
-          overrideTween(prevSibling);
-          let prevPrevSibling = prevSibling._prevRep;
-          while (prevPrevSibling && prevPrevSibling.parent.id === prevParent.id) {
-            overrideTween(prevPrevSibling);
-            prevPrevSibling = prevPrevSibling._prevRep;
-          }
-        }
-        const absoluteUpdateStartTime = tweenAbsStartTime - tween._delay;
-        if (prevAbsEndTime > absoluteUpdateStartTime) {
-          const prevChangeStartTime = prevSibling._startTime;
-          const prevTLOffset = prevAbsEndTime - (prevChangeStartTime + prevSibling._updateDuration);
-          const updatedPrevChangeDuration = round(absoluteUpdateStartTime - prevTLOffset - prevChangeStartTime, 12);
-          prevSibling._changeDuration = updatedPrevChangeDuration;
-          prevSibling._currentTime = updatedPrevChangeDuration;
-          prevSibling._isOverlapped = 1;
-          if (updatedPrevChangeDuration < minValue) {
-            overrideTween(prevSibling);
-          }
-        }
-        let pausePrevParentAnimation = true;
-        forEachChildren(prevParent, (t) => {
-          if (!t._isOverlapped) pausePrevParentAnimation = false;
-        });
-        if (pausePrevParentAnimation) {
-          const prevParentTL = prevParent.parent;
-          if (prevParentTL) {
-            let pausePrevParentTL = true;
-            forEachChildren(prevParentTL, (a) => {
-              if (a !== prevParent) {
-                forEachChildren(a, (t) => {
-                  if (!t._isOverlapped) pausePrevParentTL = false;
-                });
-              }
-            });
-            if (pausePrevParentTL) {
-              prevParentTL.cancel();
-            }
-          } else {
-            prevParent.cancel();
-          }
-        }
-      }
-    } else if (tweenCompositionType === compositionTypes.blend) {
-      const additiveTweenSiblings = getTweenSiblings(tween.target, tween.property, "_add");
-      const additiveAnimation = addAdditiveAnimation(lookups._add);
-      let lookupTween = additiveTweenSiblings._head;
-      if (!lookupTween) {
-        lookupTween = { ...tween };
-        lookupTween._composition = compositionTypes.replace;
-        lookupTween._updateDuration = minValue;
-        lookupTween._startTime = 0;
-        lookupTween._numbers = cloneArray(tween._fromNumbers);
-        lookupTween._number = 0;
-        lookupTween._next = null;
-        lookupTween._prev = null;
-        addChild(additiveTweenSiblings, lookupTween);
-        addChild(additiveAnimation, lookupTween);
-      }
-      const toNumber = tween._toNumber;
-      tween._fromNumber = lookupTween._fromNumber - toNumber;
-      tween._toNumber = 0;
-      tween._numbers = cloneArray(tween._fromNumbers);
-      tween._number = 0;
-      lookupTween._fromNumber = toNumber;
-      if (tween._toNumbers) {
-        const toNumbers = cloneArray(tween._toNumbers);
-        if (toNumbers) {
-          toNumbers.forEach((value, i) => {
-            tween._fromNumbers[i] = lookupTween._fromNumbers[i] - value;
-            tween._toNumbers[i] = 0;
-          });
-        }
-        lookupTween._fromNumbers = toNumbers;
-      }
-      addChild(additiveTweenSiblings, tween, null, "_prevAdd", "_nextAdd");
-    }
-    return tween;
-  };
-  var removeTweenSliblings = (tween) => {
-    const tweenComposition = tween._composition;
-    if (tweenComposition !== compositionTypes.none) {
-      const tweenTarget = tween.target;
-      const tweenProperty = tween.property;
-      const replaceTweensLookup = lookups._rep;
-      const replaceTargetProps = replaceTweensLookup.get(tweenTarget);
-      const tweenReplaceSiblings = replaceTargetProps[tweenProperty];
-      removeChild(tweenReplaceSiblings, tween, "_prevRep", "_nextRep");
-      if (tweenComposition === compositionTypes.blend) {
-        const addTweensLookup = lookups._add;
-        const addTargetProps = addTweensLookup.get(tweenTarget);
-        if (!addTargetProps) return;
-        const additiveTweenSiblings = addTargetProps[tweenProperty];
-        const additiveAnimation = additive.animation;
-        removeChild(additiveTweenSiblings, tween, "_prevAdd", "_nextAdd");
-        const lookupTween = additiveTweenSiblings._head;
-        if (lookupTween && lookupTween === additiveTweenSiblings._tail) {
-          removeChild(additiveTweenSiblings, lookupTween, "_prevAdd", "_nextAdd");
-          removeChild(additiveAnimation, lookupTween);
-          let shouldClean = true;
-          for (let prop in addTargetProps) {
-            if (addTargetProps[prop]._head) {
-              shouldClean = false;
-              break;
-            }
-          }
-          if (shouldClean) {
-            addTweensLookup.delete(tweenTarget);
-          }
-        }
-      }
-    }
-    return tween;
-  };
-
-  // node_modules/animejs/dist/modules/timer/timer.js
-  var resetTimerProperties = (timer) => {
-    timer.paused = true;
-    timer.began = false;
-    timer.completed = false;
-    return timer;
-  };
-  var reviveTimer = (timer) => {
-    if (!timer._cancelled) return timer;
-    if (timer._hasChildren) {
-      forEachChildren(timer, reviveTimer);
-    } else {
-      forEachChildren(timer, (tween) => {
-        if (tween._composition !== compositionTypes.none) {
-          composeTween(tween, getTweenSiblings(tween.target, tween.property));
-        }
-      });
-    }
-    timer._cancelled = 0;
-    return timer;
-  };
-  var timerId = 0;
-  var Timer = class extends Clock {
-    /**
-     * @param {TimerParams} [parameters]
-     * @param {Timeline} [parent]
-     * @param {Number} [parentPosition]
-     */
-    constructor(parameters = {}, parent = null, parentPosition = 0) {
-      super(0);
-      ++timerId;
-      const {
-        id,
-        delay,
-        duration,
-        reversed,
-        alternate,
-        loop,
-        loopDelay,
-        autoplay,
-        frameRate,
-        playbackRate,
-        onComplete,
-        onLoop,
-        onPause,
-        onBegin,
-        onBeforeUpdate,
-        onUpdate
-      } = parameters;
-      if (scope.current) scope.current.register(this);
-      const timerInitTime = parent ? 0 : engine._lastTickTime;
-      const timerDefaults = parent ? parent.defaults : globals.defaults;
-      const timerDelay = (
-        /** @type {Number} */
-        isFnc(delay) || isUnd(delay) ? timerDefaults.delay : +delay
-      );
-      const timerDuration = isFnc(duration) || isUnd(duration) ? Infinity : +duration;
-      const timerLoop = setValue(loop, timerDefaults.loop);
-      const timerLoopDelay = setValue(loopDelay, timerDefaults.loopDelay);
-      let timerIterationCount = timerLoop === true || timerLoop === Infinity || /** @type {Number} */
-      timerLoop < 0 ? Infinity : (
-        /** @type {Number} */
-        timerLoop + 1
-      );
-      if (devTools) {
-        const isInfinite = timerIterationCount === Infinity;
-        const registered = devTools.register(this, parameters, isInfinite);
-        if (registered && isInfinite) {
-          const minIterations = alternate ? 2 : 1;
-          const iterations = parent ? devTools.maxNestedInfiniteLoops : devTools.maxInfiniteLoops;
-          timerIterationCount = Math.max(iterations, minIterations);
-        }
-      }
-      let offsetPosition = 0;
-      if (parent) {
-        offsetPosition = parentPosition;
-      } else {
-        if (!engine.reqId) engine.requestTick(now());
-        offsetPosition = (engine._lastTickTime - engine._startTime) * globals.timeScale;
-      }
-      this.id = !isUnd(id) ? id : timerId;
-      this.parent = parent;
-      this.duration = clampInfinity((timerDuration + timerLoopDelay) * timerIterationCount - timerLoopDelay) || minValue;
-      this.backwards = false;
-      this.paused = true;
-      this.began = false;
-      this.completed = false;
-      this.onBegin = onBegin || timerDefaults.onBegin;
-      this.onBeforeUpdate = onBeforeUpdate || timerDefaults.onBeforeUpdate;
-      this.onUpdate = onUpdate || timerDefaults.onUpdate;
-      this.onLoop = onLoop || timerDefaults.onLoop;
-      this.onPause = onPause || timerDefaults.onPause;
-      this.onComplete = onComplete || timerDefaults.onComplete;
-      this.iterationDuration = timerDuration;
-      this.iterationCount = timerIterationCount;
-      this._autoplay = parent ? false : setValue(autoplay, timerDefaults.autoplay);
-      this._offset = offsetPosition;
-      this._delay = timerDelay;
-      this._loopDelay = timerLoopDelay;
-      this._iterationTime = 0;
-      this._currentIteration = 0;
-      this._resolve = noop;
-      this._running = false;
-      this._reversed = +setValue(reversed, timerDefaults.reversed);
-      this._reverse = this._reversed;
-      this._cancelled = 0;
-      this._alternate = setValue(alternate, timerDefaults.alternate);
-      this._prev = null;
-      this._next = null;
-      this._lastTickTime = timerInitTime;
-      this._startTime = timerInitTime;
-      this._lastTime = timerInitTime;
-      this._fps = setValue(frameRate, timerDefaults.frameRate);
-      this._speed = setValue(playbackRate, timerDefaults.playbackRate);
-    }
-    get cancelled() {
-      return !!this._cancelled;
-    }
-    set cancelled(cancelled) {
-      cancelled ? this.cancel() : this.reset(true).play();
-    }
-    get currentTime() {
-      return clamp(round(this._currentTime, globals.precision), -this._delay, this.duration);
-    }
-    set currentTime(time) {
-      const paused = this.paused;
-      this.pause().seek(+time);
-      if (!paused) this.resume();
-    }
-    get iterationCurrentTime() {
-      return clamp(round(this._iterationTime, globals.precision), 0, this.iterationDuration);
-    }
-    set iterationCurrentTime(time) {
-      this.currentTime = this.iterationDuration * this._currentIteration + time;
-    }
-    get progress() {
-      return clamp(round(this._currentTime / this.duration, 10), 0, 1);
-    }
-    set progress(progress2) {
-      this.currentTime = this.duration * progress2;
-    }
-    get iterationProgress() {
-      return clamp(round(this._iterationTime / this.iterationDuration, 10), 0, 1);
-    }
-    set iterationProgress(progress2) {
-      const iterationDuration = this.iterationDuration;
-      this.currentTime = iterationDuration * this._currentIteration + iterationDuration * progress2;
-    }
-    get currentIteration() {
-      return this._currentIteration;
-    }
-    set currentIteration(iterationCount) {
-      this.currentTime = this.iterationDuration * clamp(+iterationCount, 0, this.iterationCount - 1);
-    }
-    get reversed() {
-      return !!this._reversed;
-    }
-    set reversed(reverse) {
-      reverse ? this.reverse() : this.play();
-    }
-    get speed() {
-      return super.speed;
-    }
-    set speed(playbackRate) {
-      super.speed = playbackRate;
-      this.resetTime();
-    }
-    /**
-     * @param  {Boolean} [softReset]
-     * @return {this}
-     */
-    reset(softReset = false) {
-      reviveTimer(this);
-      if (this._reversed && !this._reverse) this.reversed = false;
-      this._iterationTime = this.iterationDuration;
-      tick(this, 0, 1, ~~softReset, tickModes.FORCE);
-      resetTimerProperties(this);
-      if (this._hasChildren) {
-        forEachChildren(this, resetTimerProperties);
-      }
-      return this;
-    }
-    /**
-     * @param  {Boolean} internalRender
-     * @return {this}
-     */
-    init(internalRender = false) {
-      this.fps = this._fps;
-      this.speed = this._speed;
-      if (!internalRender && this._hasChildren) {
-        tick(this, this.duration, 1, ~~internalRender, tickModes.FORCE);
-      }
-      this.reset(internalRender);
-      const autoplay = this._autoplay;
-      if (autoplay === true) {
-        this.resume();
-      } else if (autoplay && !isUnd(
-        /** @type {ScrollObserver} */
-        autoplay.linked
-      )) {
-        autoplay.link(this);
-      }
-      return this;
-    }
-    /** @return {this} */
-    resetTime() {
-      const timeScale = 1 / (this._speed * engine._speed);
-      this._startTime = now() - (this._currentTime + this._delay) * timeScale;
-      return this;
-    }
-    /** @return {this} */
-    pause() {
-      if (this.paused) return this;
-      this.paused = true;
-      this.onPause(this);
-      return this;
-    }
-    /** @return {this} */
-    resume() {
-      if (!this.paused) return this;
-      this.paused = false;
-      if (this.duration <= minValue && !this._hasChildren) {
-        tick(this, minValue, 0, 0, tickModes.FORCE);
-      } else {
-        if (!this._running) {
-          addChild(engine, this);
-          engine._hasChildren = true;
-          this._running = true;
-        }
-        this.resetTime();
-        this._startTime -= 12;
-        engine.wake();
-      }
-      return this;
-    }
-    /** @return {this} */
-    restart() {
-      return this.reset().resume();
-    }
-    /**
-     * @param  {Number} time
-     * @param  {Boolean|Number} [muteCallbacks]
-     * @param  {Boolean|Number} [internalRender]
-     * @return {this}
-     */
-    seek(time, muteCallbacks = 0, internalRender = 0) {
-      reviveTimer(this);
-      this.completed = false;
-      const isPaused = this.paused;
-      this.paused = true;
-      tick(this, time + this._delay, ~~muteCallbacks, ~~internalRender, tickModes.AUTO);
-      return isPaused ? this : this.resume();
-    }
-    /** @return {this} */
-    alternate() {
-      const reversed = this._reversed;
-      const count = this.iterationCount;
-      const duration = this.iterationDuration;
-      const iterations = count === Infinity ? floor(maxValue / duration) : count;
-      this._reversed = +(this._alternate && !(iterations % 2) ? reversed : !reversed);
-      if (count === Infinity) {
-        this.iterationProgress = this._reversed ? 1 - this.iterationProgress : this.iterationProgress;
-      } else {
-        this.seek(duration * iterations - this._currentTime);
-      }
-      this.resetTime();
-      return this;
-    }
-    /** @return {this} */
-    play() {
-      if (this._reversed) this.alternate();
-      return this.resume();
-    }
-    /** @return {this} */
-    reverse() {
-      if (!this._reversed) this.alternate();
-      return this.resume();
-    }
-    // TODO: Move all the animation / tweens / children related code to Animation / Timeline
-    /** @return {this} */
-    cancel() {
-      if (this._hasChildren) {
-        forEachChildren(this, (child) => child.cancel(), true);
-      } else {
-        forEachChildren(this, removeTweenSliblings);
-      }
-      this._cancelled = 1;
-      return this.pause();
-    }
-    /**
-     * @param  {Number} newDuration
-     * @return {this}
-     */
-    stretch(newDuration) {
-      const currentDuration = this.duration;
-      const normlizedDuration = normalizeTime(newDuration);
-      if (currentDuration === normlizedDuration) return this;
-      const timeScale = newDuration / currentDuration;
-      const isSetter = newDuration <= minValue;
-      this.duration = isSetter ? minValue : normlizedDuration;
-      this.iterationDuration = isSetter ? minValue : normalizeTime(this.iterationDuration * timeScale);
-      this._offset *= timeScale;
-      this._delay *= timeScale;
-      this._loopDelay *= timeScale;
-      return this;
-    }
-    /**
-      * Cancels the timer by seeking it back to 0 and reverting the attached scroller if necessary
-      * @return {this}
-      */
-    revert() {
-      tick(this, 0, 1, 0, tickModes.AUTO);
-      const ap = (
-        /** @type {ScrollObserver} */
-        this._autoplay
-      );
-      if (ap && ap.linked && ap.linked === this) ap.revert();
-      return this.cancel();
-    }
-    /**
-      * Imediatly completes the timer, cancels it and triggers the onComplete callback
-      * @param  {Boolean|Number} [muteCallbacks]
-      * @return {this}
-      */
-    complete(muteCallbacks = 0) {
-      return this.seek(this.duration, muteCallbacks).cancel();
-    }
-    /**
-     * @typedef {this & {then: null}} ResolvedTimer
-     */
-    /**
-     * @param  {Callback<ResolvedTimer>} [callback]
-     * @return Promise<this>
-     */
-    then(callback = noop) {
-      const then = this.then;
-      const onResolve = () => {
-        this.then = null;
-        callback(
-          /** @type {ResolvedTimer} */
-          this
-        );
-        this.then = then;
-        this._resolve = noop;
-      };
-      return new Promise((r) => {
-        this._resolve = () => r(onResolve());
-        if (this.completed) this._resolve();
-        return this;
-      });
-    }
-  };
-
-  // node_modules/animejs/dist/modules/core/targets.js
-  function getNodeList(v) {
-    const n = isStr(v) ? scope.root.querySelectorAll(v) : v;
-    if (n instanceof NodeList || n instanceof HTMLCollection) return n;
-  }
-  function parseTargets(targets) {
-    if (isNil(targets)) return (
-      /** @type {TargetsArray} */
-      []
-    );
-    if (!isBrowser) return (
-      /** @type {JSTargetsArray} */
-      isArr(targets) && targets.flat(Infinity) || [targets]
-    );
-    if (isArr(targets)) {
-      const flattened = targets.flat(Infinity);
-      const parsed = [];
-      for (let i = 0, l = flattened.length; i < l; i++) {
-        const item = flattened[i];
-        if (!isNil(item)) {
-          const nodeList2 = getNodeList(item);
-          if (nodeList2) {
-            for (let j = 0, jl = nodeList2.length; j < jl; j++) {
-              const subItem = nodeList2[j];
-              if (!isNil(subItem)) {
-                let isDuplicate = false;
-                for (let k = 0, kl = parsed.length; k < kl; k++) {
-                  if (parsed[k] === subItem) {
-                    isDuplicate = true;
-                    break;
-                  }
-                }
-                if (!isDuplicate) {
-                  parsed.push(subItem);
-                }
-              }
-            }
-          } else {
-            let isDuplicate = false;
-            for (let j = 0, jl = parsed.length; j < jl; j++) {
-              if (parsed[j] === item) {
-                isDuplicate = true;
-                break;
-              }
-            }
-            if (!isDuplicate) {
-              parsed.push(item);
-            }
-          }
-        }
-      }
-      return parsed;
-    }
-    const nodeList = getNodeList(targets);
-    if (nodeList) return (
-      /** @type {DOMTargetsArray} */
-      Array.from(nodeList)
-    );
-    return (
-      /** @type {TargetsArray} */
-      [targets]
-    );
-  }
-  function registerTargets(targets) {
-    const parsedTargetsArray = parseTargets(targets);
-    const parsedTargetsLength = parsedTargetsArray.length;
-    if (parsedTargetsLength) {
-      for (let i = 0; i < parsedTargetsLength; i++) {
-        const target = parsedTargetsArray[i];
-        if (!target[isRegisteredTargetSymbol]) {
-          target[isRegisteredTargetSymbol] = true;
-          const isSvgType = isSvg(target);
-          const isDom = (
-            /** @type {DOMTarget} */
-            target.nodeType || isSvgType
-          );
-          if (isDom) {
-            target[isDomSymbol] = true;
-            target[isSvgSymbol] = isSvgType;
-            target[transformsSymbol] = {};
-          }
-        }
-      }
-    }
-    return parsedTargetsArray;
-  }
-
-  // node_modules/animejs/dist/modules/core/units.js
-  var angleUnitsMap = { "deg": 1, "rad": 180 / PI, "turn": 360 };
-  var convertedValuesCache = {};
-  var convertValueUnit = (el, decomposedValue, unit, force = false) => {
-    const currentUnit = decomposedValue.u;
-    const currentNumber = decomposedValue.n;
-    if (decomposedValue.t === valueTypes.UNIT && currentUnit === unit) {
-      return decomposedValue;
-    }
-    const cachedKey = currentNumber + currentUnit + unit;
-    const cached = convertedValuesCache[cachedKey];
-    if (!isUnd(cached) && !force) {
-      decomposedValue.n = cached;
-    } else {
-      let convertedValue;
-      if (currentUnit in angleUnitsMap) {
-        convertedValue = currentNumber * angleUnitsMap[currentUnit] / angleUnitsMap[unit];
-      } else {
-        const baseline = 100;
-        const tempEl = (
-          /** @type {DOMTarget} */
-          el.cloneNode()
-        );
-        const parentNode = el.parentNode;
-        const parentEl = parentNode && parentNode !== doc ? parentNode : doc.body;
-        parentEl.appendChild(tempEl);
-        const elStyle = tempEl.style;
-        elStyle.width = baseline + currentUnit;
-        const currentUnitWidth = (
-          /** @type {HTMLElement} */
-          tempEl.offsetWidth || baseline
-        );
-        elStyle.width = baseline + unit;
-        const newUnitWidth = (
-          /** @type {HTMLElement} */
-          tempEl.offsetWidth || baseline
-        );
-        const factor = currentUnitWidth / newUnitWidth;
-        parentEl.removeChild(tempEl);
-        convertedValue = factor * currentNumber;
-      }
-      decomposedValue.n = convertedValue;
-      convertedValuesCache[cachedKey] = convertedValue;
-    }
-    decomposedValue.t === valueTypes.UNIT;
-    decomposedValue.u = unit;
-    return decomposedValue;
-  };
-
-  // node_modules/animejs/dist/modules/easings/none.js
-  var none = (t) => t;
-
-  // node_modules/animejs/dist/modules/easings/eases/parser.js
-  var easeInPower = (p = 1.68) => (t) => pow(t, +p);
-  var easeTypes = {
-    in: (easeIn) => (t) => easeIn(t),
-    out: (easeIn) => (t) => 1 - easeIn(1 - t),
-    inOut: (easeIn) => (t) => t < 0.5 ? easeIn(t * 2) / 2 : 1 - easeIn(t * -2 + 2) / 2,
-    outIn: (easeIn) => (t) => t < 0.5 ? (1 - easeIn(1 - t * 2)) / 2 : (easeIn(t * 2 - 1) + 1) / 2
-  };
-  var halfPI = PI / 2;
-  var doublePI = PI * 2;
-  var easeInFunctions = {
-    [emptyString]: easeInPower,
-    Quad: easeInPower(2),
-    Cubic: easeInPower(3),
-    Quart: easeInPower(4),
-    Quint: easeInPower(5),
-    /** @type {EasingFunction} */
-    Sine: (t) => 1 - cos(t * halfPI),
-    /** @type {EasingFunction} */
-    Circ: (t) => 1 - sqrt(1 - t * t),
-    /** @type {EasingFunction} */
-    Expo: (t) => t ? pow(2, 10 * t - 10) : 0,
-    /** @type {EasingFunction} */
-    Bounce: (t) => {
-      let pow2, b = 4;
-      while (t < ((pow2 = pow(2, --b)) - 1) / 11) ;
-      return 1 / pow(4, 3 - b) - 7.5625 * pow((pow2 * 3 - 2) / 22 - t, 2);
-    },
-    /** @type {BackEasing} */
-    Back: (overshoot = 1.7) => (t) => (+overshoot + 1) * t * t * t - +overshoot * t * t,
-    /** @type {ElasticEasing} */
-    Elastic: (amplitude = 1, period = 0.3) => {
-      const a = clamp(+amplitude, 1, 10);
-      const p = clamp(+period, minValue, 2);
-      const s = p / doublePI * asin(1 / a);
-      const e = doublePI / p;
-      return (t) => t === 0 || t === 1 ? t : -a * pow(2, -10 * (1 - t)) * sin((1 - t - s) * e);
-    }
-  };
-  var eases = /* @__PURE__ */ (() => {
-    const list = { linear: none, none };
-    for (let type in easeTypes) {
-      for (let name in easeInFunctions) {
-        const easeIn = easeInFunctions[name];
-        const easeType = easeTypes[type];
-        list[type + name] = /** @type {EasingFunctionWithParams|EasingFunction} */
-        name === emptyString || name === "Back" || name === "Elastic" ? (a, b) => easeType(
-          /** @type {EasingFunctionWithParams} */
-          easeIn(a, b)
-        ) : easeType(
-          /** @type {EasingFunction} */
-          easeIn
-        );
-      }
-    }
-    return (
-      /** @type {EasesFunctions} */
-      list
-    );
-  })();
-  var easesLookups = { linear: none, none };
-  var parseEaseString = (string) => {
-    if (easesLookups[string]) return easesLookups[string];
-    if (string.indexOf("(") <= -1) {
-      const hasParams = easeTypes[string] || string.includes("Back") || string.includes("Elastic");
-      const parsedFn = (
-        /** @type {EasingFunction} */
-        hasParams ? (
-          /** @type {EasingFunctionWithParams} */
-          eases[string]()
-        ) : eases[string]
-      );
-      return parsedFn ? easesLookups[string] = parsedFn : none;
-    } else {
-      const split3 = string.slice(0, -1).split("(");
-      const parsedFn = (
-        /** @type {EasingFunctionWithParams} */
-        eases[split3[0]]
-      );
-      return parsedFn ? easesLookups[string] = parsedFn(...split3[1].split(",")) : none;
-    }
-  };
-  var deprecated = ["steps(", "irregular(", "linear(", "cubicBezier("];
-  var parseEase = (ease) => {
-    if (isStr(ease)) {
-      for (let i = 0, l = deprecated.length; i < l; i++) {
-        if (stringStartsWith(ease, deprecated[i])) {
-          console.warn(`String syntax for \`ease: "${ease}"\` has been removed from the core and replaced by importing and passing the easing function directly: \`ease: ${ease}\``);
-          return none;
-        }
-      }
-    }
-    const easeFunc = isFnc(ease) ? ease : isStr(ease) ? parseEaseString(
-      /** @type {String} */
-      ease
-    ) : none;
-    return easeFunc;
-  };
-
-  // node_modules/animejs/dist/modules/animation/animation.js
-  var fromTargetObject = createDecomposedValueTargetObject();
-  var toTargetObject = createDecomposedValueTargetObject();
-  var inlineStylesStore = {};
-  var toFunctionStore = { func: null };
-  var fromFunctionStore = { func: null };
-  var keyframesTargetArray = [null];
-  var fastSetValuesArray = [null, null];
-  var keyObjectTarget = { to: null };
-  var tweenId = 0;
-  var JSAnimationId = 0;
-  var keyframes;
-  var key;
-  var generateKeyframes = (keyframes2, parameters) => {
-    const properties = {};
-    if (isArr(keyframes2)) {
-      const propertyNames = [].concat(.../** @type {DurationKeyframes} */
-      keyframes2.map((key2) => Object.keys(key2))).filter(isKey);
-      for (let i = 0, l = propertyNames.length; i < l; i++) {
-        const propName = propertyNames[i];
-        const propArray = (
-          /** @type {DurationKeyframes} */
-          keyframes2.map((key2) => {
-            const newKey = {};
-            for (let p in key2) {
-              const keyValue = (
-                /** @type {TweenPropValue} */
-                key2[p]
-              );
-              if (isKey(p)) {
-                if (p === propName) {
-                  newKey.to = keyValue;
-                }
-              } else {
-                newKey[p] = keyValue;
-              }
-            }
-            return newKey;
-          })
-        );
-        properties[propName] = /** @type {ArraySyntaxValue} */
-        propArray;
-      }
-    } else {
-      const totalDuration = (
-        /** @type {Number} */
-        setValue(parameters.duration, globals.defaults.duration)
-      );
-      const keys2 = Object.keys(keyframes2).map((key2) => {
-        return { o: parseFloat(key2) / 100, p: keyframes2[key2] };
-      }).sort((a, b) => a.o - b.o);
-      keys2.forEach((key2) => {
-        const offset = key2.o;
-        const prop = key2.p;
-        for (let name in prop) {
-          if (isKey(name)) {
-            let propArray = (
-              /** @type {Array} */
-              properties[name]
-            );
-            if (!propArray) propArray = properties[name] = [];
-            const duration = offset * totalDuration;
-            let length = propArray.length;
-            let prevKey = propArray[length - 1];
-            const keyObj = { to: prop[name] };
-            let durProgress = 0;
-            for (let i = 0; i < length; i++) {
-              durProgress += propArray[i].duration;
-            }
-            if (length === 1) {
-              keyObj.from = prevKey.to;
-            }
-            if (prop.ease) {
-              keyObj.ease = prop.ease;
-            }
-            keyObj.duration = duration - (length ? durProgress : 0);
-            propArray.push(keyObj);
-          }
-        }
-        return key2;
-      });
-      for (let name in properties) {
-        const propArray = (
-          /** @type {Array} */
-          properties[name]
-        );
-        let prevEase;
-        for (let i = 0, l = propArray.length; i < l; i++) {
-          const prop = propArray[i];
-          const currentEase = prop.ease;
-          prop.ease = prevEase ? prevEase : void 0;
-          prevEase = currentEase;
-        }
-        if (!propArray[0].duration) {
-          propArray.shift();
-        }
-      }
-    }
-    return properties;
-  };
-  var JSAnimation = class extends Timer {
-    /**
-     * @param {TargetsParam} targets
-     * @param {AnimationParams} parameters
-     * @param {Timeline} [parent]
-     * @param {Number} [parentPosition]
-     * @param {Boolean} [fastSet=false]
-     * @param {Number} [index=0]
-     * @param {Number} [length=0]
-     */
-    constructor(targets, parameters, parent, parentPosition, fastSet = false, index = 0, length = 0) {
-      super(
-        /** @type {TimerParams & AnimationParams} */
-        parameters,
-        parent,
-        parentPosition
-      );
-      ++JSAnimationId;
-      const parsedTargets = registerTargets(targets);
-      const targetsLength = parsedTargets.length;
-      const kfParams = (
-        /** @type {AnimationParams} */
-        parameters.keyframes
-      );
-      const params = (
-        /** @type {AnimationParams} */
-        kfParams ? mergeObjects(generateKeyframes(
-          /** @type {DurationKeyframes} */
-          kfParams,
-          parameters
-        ), parameters) : parameters
-      );
-      const {
-        id,
-        delay,
-        duration,
-        ease,
-        playbackEase,
-        modifier,
-        composition,
-        onRender
-      } = params;
-      const animDefaults = parent ? parent.defaults : globals.defaults;
-      const animEase = setValue(ease, animDefaults.ease);
-      const animPlaybackEase = setValue(playbackEase, animDefaults.playbackEase);
-      const parsedAnimPlaybackEase = animPlaybackEase ? parseEase(animPlaybackEase) : null;
-      const hasSpring = !isUnd(
-        /** @type {Spring} */
-        animEase.ease
-      );
-      const tEasing = hasSpring ? (
-        /** @type {Spring} */
-        animEase.ease
-      ) : setValue(ease, parsedAnimPlaybackEase ? "linear" : animDefaults.ease);
-      const tDuration = hasSpring ? (
-        /** @type {Spring} */
-        animEase.settlingDuration
-      ) : setValue(duration, animDefaults.duration);
-      const tDelay = setValue(delay, animDefaults.delay);
-      const tModifier = modifier || animDefaults.modifier;
-      const tComposition = isUnd(composition) && targetsLength >= K ? compositionTypes.none : !isUnd(composition) ? composition : animDefaults.composition;
-      const absoluteOffsetTime = this._offset + (parent ? parent._offset : 0);
-      if (hasSpring) animEase.parent = this;
-      let iterationDuration = NaN;
-      let iterationDelay = NaN;
-      let animationAnimationLength = 0;
-      let shouldTriggerRender = 0;
-      for (let targetIndex = 0; targetIndex < targetsLength; targetIndex++) {
-        const target = parsedTargets[targetIndex];
-        const ti = index || targetIndex;
-        const tl = length || targetsLength;
-        let lastTransformGroupIndex = NaN;
-        let lastTransformGroupLength = NaN;
-        for (let p in params) {
-          if (isKey(p)) {
-            const tweenType = getTweenType(target, p);
-            const propName = sanitizePropertyName(p, target, tweenType);
-            let propValue = params[p];
-            const isPropValueArray = isArr(propValue);
-            if (fastSet && !isPropValueArray) {
-              fastSetValuesArray[0] = propValue;
-              fastSetValuesArray[1] = propValue;
-              propValue = fastSetValuesArray;
-            }
-            if (isPropValueArray) {
-              const arrayLength = (
-                /** @type {Array} */
-                propValue.length
-              );
-              const isNotObjectValue = !isObj(propValue[0]);
-              if (arrayLength === 2 && isNotObjectValue) {
-                keyObjectTarget.to = /** @type {TweenParamValue} */
-                /** @type {unknown} */
-                propValue;
-                keyframesTargetArray[0] = keyObjectTarget;
-                keyframes = keyframesTargetArray;
-              } else if (arrayLength > 2 && isNotObjectValue) {
-                keyframes = [];
-                propValue.forEach((v, i) => {
-                  if (!i) {
-                    fastSetValuesArray[0] = v;
-                  } else if (i === 1) {
-                    fastSetValuesArray[1] = v;
-                    keyframes.push(fastSetValuesArray);
-                  } else {
-                    keyframes.push(v);
-                  }
-                });
-              } else {
-                keyframes = /** @type {Array.<TweenKeyValue>} */
-                propValue;
-              }
-            } else {
-              keyframesTargetArray[0] = propValue;
-              keyframes = keyframesTargetArray;
-            }
-            let siblings = null;
-            let prevTween = null;
-            let firstTweenChangeStartTime = NaN;
-            let lastTweenChangeEndTime = 0;
-            let tweenIndex = 0;
-            for (let l = keyframes.length; tweenIndex < l; tweenIndex++) {
-              const keyframe = keyframes[tweenIndex];
-              if (isObj(keyframe)) {
-                key = keyframe;
-              } else {
-                keyObjectTarget.to = /** @type {TweenParamValue} */
-                keyframe;
-                key = keyObjectTarget;
-              }
-              toFunctionStore.func = null;
-              fromFunctionStore.func = null;
-              const computedToValue = getFunctionValue(key.to, target, ti, tl, toFunctionStore);
-              let tweenToValue;
-              if (isObj(computedToValue) && !isUnd(computedToValue.to)) {
-                key = computedToValue;
-                tweenToValue = computedToValue.to;
-              } else {
-                tweenToValue = computedToValue;
-              }
-              const tweenFromValue = getFunctionValue(key.from, target, ti, tl);
-              const easeToParse = key.ease || tEasing;
-              const easeFunctionResult = getFunctionValue(easeToParse, target, ti, tl);
-              const keyEasing = isFnc(easeFunctionResult) || isStr(easeFunctionResult) ? easeFunctionResult : easeToParse;
-              const hasSpring2 = !isUnd(keyEasing) && !isUnd(
-                /** @type {Spring} */
-                keyEasing.ease
-              );
-              const tweenEasing = hasSpring2 ? (
-                /** @type {Spring} */
-                keyEasing.ease
-              ) : keyEasing;
-              const tweenDuration = hasSpring2 ? (
-                /** @type {Spring} */
-                keyEasing.settlingDuration
-              ) : getFunctionValue(setValue(key.duration, l > 1 ? getFunctionValue(tDuration, target, ti, tl) / l : tDuration), target, ti, tl);
-              const tweenDelay = getFunctionValue(setValue(key.delay, !tweenIndex ? tDelay : 0), target, ti, tl);
-              const computedComposition = getFunctionValue(setValue(key.composition, tComposition), target, ti, tl);
-              const tweenComposition = isNum(computedComposition) ? computedComposition : compositionTypes[computedComposition];
-              const tweenModifier = key.modifier || tModifier;
-              const hasFromvalue = !isUnd(tweenFromValue);
-              const hasToValue = !isUnd(tweenToValue);
-              const isFromToArray = isArr(tweenToValue);
-              const isFromToValue = isFromToArray || hasFromvalue && hasToValue;
-              const tweenStartTime = prevTween ? lastTweenChangeEndTime + tweenDelay : tweenDelay;
-              const absoluteStartTime = round(absoluteOffsetTime + tweenStartTime, 12);
-              if (!shouldTriggerRender && (hasFromvalue || isFromToArray)) shouldTriggerRender = 1;
-              let prevSibling = prevTween;
-              if (tweenComposition !== compositionTypes.none) {
-                if (!siblings) siblings = getTweenSiblings(target, propName);
-                let nextSibling = siblings._head;
-                while (nextSibling && !nextSibling._isOverridden && nextSibling._absoluteStartTime <= absoluteStartTime) {
-                  prevSibling = nextSibling;
-                  nextSibling = nextSibling._nextRep;
-                  if (nextSibling && nextSibling._absoluteStartTime >= absoluteStartTime) {
-                    while (nextSibling) {
-                      overrideTween(nextSibling);
-                      nextSibling = nextSibling._nextRep;
-                    }
-                  }
-                }
-              }
-              if (isFromToValue) {
-                decomposeRawValue(isFromToArray ? getFunctionValue(tweenToValue[0], target, ti, tl, fromFunctionStore) : tweenFromValue, fromTargetObject);
-                decomposeRawValue(isFromToArray ? getFunctionValue(tweenToValue[1], target, ti, tl, toFunctionStore) : tweenToValue, toTargetObject);
-                const originalValue = getOriginalAnimatableValue(target, propName, tweenType, inlineStylesStore);
-                if (fromTargetObject.t === valueTypes.NUMBER) {
-                  if (prevSibling) {
-                    if (prevSibling._valueType === valueTypes.UNIT) {
-                      fromTargetObject.t = valueTypes.UNIT;
-                      fromTargetObject.u = prevSibling._unit;
-                    }
-                  } else {
-                    decomposeRawValue(
-                      originalValue,
-                      decomposedOriginalValue
-                    );
-                    if (decomposedOriginalValue.t === valueTypes.UNIT) {
-                      fromTargetObject.t = valueTypes.UNIT;
-                      fromTargetObject.u = decomposedOriginalValue.u;
-                    }
-                  }
-                }
-              } else {
-                if (hasToValue) {
-                  decomposeRawValue(tweenToValue, toTargetObject);
-                } else {
-                  if (prevTween) {
-                    decomposeTweenValue(prevTween, toTargetObject);
-                  } else {
-                    decomposeRawValue(parent && prevSibling && prevSibling.parent.parent === parent ? prevSibling._value : getOriginalAnimatableValue(target, propName, tweenType, inlineStylesStore), toTargetObject);
-                  }
-                }
-                if (hasFromvalue) {
-                  decomposeRawValue(tweenFromValue, fromTargetObject);
-                } else {
-                  if (prevTween) {
-                    decomposeTweenValue(prevTween, fromTargetObject);
-                  } else {
-                    decomposeRawValue(parent && prevSibling && prevSibling.parent.parent === parent ? prevSibling._value : (
-                      // No need to get and parse the original value if the tween is part of a timeline and has a previous sibling part of the same timeline
-                      getOriginalAnimatableValue(target, propName, tweenType, inlineStylesStore)
-                    ), fromTargetObject);
-                  }
-                }
-              }
-              if (fromTargetObject.o) {
-                fromTargetObject.n = getRelativeValue(
-                  !prevSibling ? decomposeRawValue(
-                    getOriginalAnimatableValue(target, propName, tweenType, inlineStylesStore),
-                    decomposedOriginalValue
-                  ).n : prevSibling._toNumber,
-                  fromTargetObject.n,
-                  fromTargetObject.o
-                );
-              }
-              if (toTargetObject.o) {
-                toTargetObject.n = getRelativeValue(fromTargetObject.n, toTargetObject.n, toTargetObject.o);
-              }
-              if (fromTargetObject.t !== toTargetObject.t) {
-                if (fromTargetObject.t === valueTypes.COMPLEX || toTargetObject.t === valueTypes.COMPLEX) {
-                  const complexValue = fromTargetObject.t === valueTypes.COMPLEX ? fromTargetObject : toTargetObject;
-                  const notComplexValue = fromTargetObject.t === valueTypes.COMPLEX ? toTargetObject : fromTargetObject;
-                  notComplexValue.t = valueTypes.COMPLEX;
-                  notComplexValue.s = cloneArray(complexValue.s);
-                  notComplexValue.d = complexValue.d.map(() => notComplexValue.n);
-                } else if (fromTargetObject.t === valueTypes.UNIT || toTargetObject.t === valueTypes.UNIT) {
-                  const unitValue = fromTargetObject.t === valueTypes.UNIT ? fromTargetObject : toTargetObject;
-                  const notUnitValue = fromTargetObject.t === valueTypes.UNIT ? toTargetObject : fromTargetObject;
-                  notUnitValue.t = valueTypes.UNIT;
-                  notUnitValue.u = unitValue.u;
-                } else if (fromTargetObject.t === valueTypes.COLOR || toTargetObject.t === valueTypes.COLOR) {
-                  const colorValue = fromTargetObject.t === valueTypes.COLOR ? fromTargetObject : toTargetObject;
-                  const notColorValue = fromTargetObject.t === valueTypes.COLOR ? toTargetObject : fromTargetObject;
-                  notColorValue.t = valueTypes.COLOR;
-                  notColorValue.s = colorValue.s;
-                  notColorValue.d = [0, 0, 0, 1];
-                }
-              }
-              if (fromTargetObject.u !== toTargetObject.u) {
-                let valueToConvert = toTargetObject.u ? fromTargetObject : toTargetObject;
-                valueToConvert = convertValueUnit(
-                  /** @type {DOMTarget} */
-                  target,
-                  valueToConvert,
-                  toTargetObject.u ? toTargetObject.u : fromTargetObject.u,
-                  false
-                );
-              }
-              if (toTargetObject.d && fromTargetObject.d && toTargetObject.d.length !== fromTargetObject.d.length) {
-                const longestValue = fromTargetObject.d.length > toTargetObject.d.length ? fromTargetObject : toTargetObject;
-                const shortestValue = longestValue === fromTargetObject ? toTargetObject : fromTargetObject;
-                shortestValue.d = longestValue.d.map((_, i) => isUnd(shortestValue.d[i]) ? 0 : shortestValue.d[i]);
-                shortestValue.s = cloneArray(longestValue.s);
-              }
-              const tweenUpdateDuration = round(+tweenDuration || minValue, 12);
-              let inlineValue = inlineStylesStore[propName];
-              if (!isNil(inlineValue)) inlineStylesStore[propName] = null;
-              const tween = {
-                parent: this,
-                id: tweenId++,
-                property: propName,
-                target,
-                _value: null,
-                _toFunc: toFunctionStore.func,
-                _fromFunc: fromFunctionStore.func,
-                _ease: parseEase(tweenEasing),
-                _fromNumbers: cloneArray(fromTargetObject.d),
-                _toNumbers: cloneArray(toTargetObject.d),
-                _strings: cloneArray(toTargetObject.s),
-                _fromNumber: fromTargetObject.n,
-                _toNumber: toTargetObject.n,
-                _numbers: cloneArray(fromTargetObject.d),
-                // For additive tween and animatables
-                _number: fromTargetObject.n,
-                // For additive tween and animatables
-                _unit: toTargetObject.u,
-                _modifier: tweenModifier,
-                _currentTime: 0,
-                _startTime: tweenStartTime,
-                _delay: +tweenDelay,
-                _updateDuration: tweenUpdateDuration,
-                _changeDuration: tweenUpdateDuration,
-                _absoluteStartTime: absoluteStartTime,
-                // NOTE: Investigate bit packing to stores ENUM / BOOL
-                _tweenType: tweenType,
-                _valueType: toTargetObject.t,
-                _composition: tweenComposition,
-                _isOverlapped: 0,
-                _isOverridden: 0,
-                _renderTransforms: 0,
-                _inlineValue: inlineValue,
-                _prevRep: null,
-                // For replaced tween
-                _nextRep: null,
-                // For replaced tween
-                _prevAdd: null,
-                // For additive tween
-                _nextAdd: null,
-                // For additive tween
-                _prev: null,
-                _next: null
-              };
-              if (tweenComposition !== compositionTypes.none) {
-                composeTween(tween, siblings);
-              }
-              if (isNaN(firstTweenChangeStartTime)) {
-                firstTweenChangeStartTime = tween._startTime;
-              }
-              lastTweenChangeEndTime = round(tweenStartTime + tweenUpdateDuration, 12);
-              prevTween = tween;
-              animationAnimationLength++;
-              addChild(this, tween);
-            }
-            if (isNaN(iterationDelay) || firstTweenChangeStartTime < iterationDelay) {
-              iterationDelay = firstTweenChangeStartTime;
-            }
-            if (isNaN(iterationDuration) || lastTweenChangeEndTime > iterationDuration) {
-              iterationDuration = lastTweenChangeEndTime;
-            }
-            if (tweenType === tweenTypes.TRANSFORM) {
-              lastTransformGroupIndex = animationAnimationLength - tweenIndex;
-              lastTransformGroupLength = animationAnimationLength;
-            }
-          }
-        }
-        if (!isNaN(lastTransformGroupIndex)) {
-          let i = 0;
-          forEachChildren(this, (tween) => {
-            if (i >= lastTransformGroupIndex && i < lastTransformGroupLength) {
-              tween._renderTransforms = 1;
-              if (tween._composition === compositionTypes.blend) {
-                forEachChildren(additive.animation, (additiveTween) => {
-                  if (additiveTween.id === tween.id) {
-                    additiveTween._renderTransforms = 1;
-                  }
-                });
-              }
-            }
-            i++;
-          });
-        }
-      }
-      if (!targetsLength) {
-        console.warn(`No target found. Make sure the element you're trying to animate is accessible before creating your animation.`);
-      }
-      if (iterationDelay) {
-        forEachChildren(this, (tween) => {
-          if (!(tween._startTime - tween._delay)) {
-            tween._delay -= iterationDelay;
-          }
-          tween._startTime -= iterationDelay;
-        });
-        iterationDuration -= iterationDelay;
-      } else {
-        iterationDelay = 0;
-      }
-      if (!iterationDuration) {
-        iterationDuration = minValue;
-        this.iterationCount = 0;
-      }
-      this.targets = parsedTargets;
-      this.id = !isUnd(id) ? id : JSAnimationId;
-      this.duration = iterationDuration === minValue ? minValue : clampInfinity((iterationDuration + this._loopDelay) * this.iterationCount - this._loopDelay) || minValue;
-      this.onRender = onRender || animDefaults.onRender;
-      this._ease = parsedAnimPlaybackEase;
-      this._delay = iterationDelay;
-      this.iterationDuration = iterationDuration;
-      if (!this._autoplay && shouldTriggerRender) this.onRender(this);
-    }
-    /**
-     * @param  {Number} newDuration
-     * @return {this}
-     */
-    stretch(newDuration) {
-      const currentDuration = this.duration;
-      if (currentDuration === normalizeTime(newDuration)) return this;
-      const timeScale = newDuration / currentDuration;
-      forEachChildren(this, (tween) => {
-        tween._updateDuration = normalizeTime(tween._updateDuration * timeScale);
-        tween._changeDuration = normalizeTime(tween._changeDuration * timeScale);
-        tween._currentTime *= timeScale;
-        tween._startTime *= timeScale;
-        tween._absoluteStartTime *= timeScale;
-      });
-      return super.stretch(newDuration);
-    }
-    /**
-     * @return {this}
-     */
-    refresh() {
-      forEachChildren(this, (tween) => {
-        const toFunc = tween._toFunc;
-        const fromFunc = tween._fromFunc;
-        if (toFunc || fromFunc) {
-          if (fromFunc) {
-            decomposeRawValue(fromFunc(), fromTargetObject);
-            if (fromTargetObject.u !== tween._unit && tween.target[isDomSymbol]) {
-              convertValueUnit(
-                /** @type {DOMTarget} */
-                tween.target,
-                fromTargetObject,
-                tween._unit,
-                true
-              );
-            }
-            tween._fromNumbers = cloneArray(fromTargetObject.d);
-            tween._fromNumber = fromTargetObject.n;
-          } else if (toFunc) {
-            decomposeRawValue(getOriginalAnimatableValue(tween.target, tween.property, tween._tweenType), decomposedOriginalValue);
-            tween._fromNumbers = cloneArray(decomposedOriginalValue.d);
-            tween._fromNumber = decomposedOriginalValue.n;
-          }
-          if (toFunc) {
-            decomposeRawValue(toFunc(), toTargetObject);
-            tween._toNumbers = cloneArray(toTargetObject.d);
-            tween._strings = cloneArray(toTargetObject.s);
-            tween._toNumber = toTargetObject.o ? getRelativeValue(tween._fromNumber, toTargetObject.n, toTargetObject.o) : toTargetObject.n;
-          }
-        }
-      });
-      if (this.duration === minValue) this.restart();
-      return this;
-    }
-    /**
-     * Cancel the animation and revert all the values affected by this animation to their original state
-     * @return {this}
-     */
-    revert() {
-      super.revert();
-      return cleanInlineStyles(this);
-    }
-    /**
-     * @typedef {this & {then: null}} ResolvedJSAnimation
-     */
-    /**
-     * @param  {Callback<ResolvedJSAnimation>} [callback]
-     * @return Promise<this>
-     */
-    then(callback) {
-      return super.then(callback);
-    }
-  };
-  var animate = (targets, parameters) => new JSAnimation(targets, parameters, null, 0, false).init();
-
-  // node_modules/animejs/dist/modules/timeline/position.js
-  var getPrevChildOffset = (timeline2, timePosition) => {
-    if (stringStartsWith(timePosition, "<")) {
-      const goToPrevAnimationOffset = timePosition[1] === "<";
-      const prevAnimation = (
-        /** @type {Tickable} */
-        timeline2._tail
-      );
-      const prevOffset = prevAnimation ? prevAnimation._offset + prevAnimation._delay : 0;
-      return goToPrevAnimationOffset ? prevOffset : prevOffset + prevAnimation.duration;
-    }
-  };
-  var parseTimelinePosition = (timeline2, timePosition) => {
-    let tlDuration = timeline2.iterationDuration;
-    if (tlDuration === minValue) tlDuration = 0;
-    if (isUnd(timePosition)) return tlDuration;
-    if (isNum(+timePosition)) return +timePosition;
-    const timePosStr = (
-      /** @type {String} */
-      timePosition
-    );
-    const tlLabels = timeline2 ? timeline2.labels : null;
-    const hasLabels = !isNil(tlLabels);
-    const prevOffset = getPrevChildOffset(timeline2, timePosStr);
-    const hasSibling = !isUnd(prevOffset);
-    const matchedRelativeOperator = relativeValuesExecRgx.exec(timePosStr);
-    if (matchedRelativeOperator) {
-      const fullOperator = matchedRelativeOperator[0];
-      const split3 = timePosStr.split(fullOperator);
-      const labelOffset = hasLabels && split3[0] ? tlLabels[split3[0]] : tlDuration;
-      const parsedOffset = hasSibling ? prevOffset : hasLabels ? labelOffset : tlDuration;
-      const parsedNumericalOffset = +split3[1];
-      return getRelativeValue(parsedOffset, parsedNumericalOffset, fullOperator[0]);
-    } else {
-      return hasSibling ? prevOffset : hasLabels ? !isUnd(tlLabels[timePosStr]) ? tlLabels[timePosStr] : tlDuration : tlDuration;
-    }
-  };
-
-  // node_modules/animejs/dist/modules/utils/time.js
-  var keepTime = (constructor) => {
-    let tracked;
-    return (...args) => {
-      let currentIteration, currentIterationProgress, reversed, alternate;
-      if (tracked) {
-        currentIteration = tracked.currentIteration;
-        currentIterationProgress = tracked.iterationProgress;
-        reversed = tracked.reversed;
-        alternate = tracked._alternate;
-        tracked.revert();
-      }
-      const cleanup = constructor(...args);
-      if (cleanup && !isFnc(cleanup) && cleanup.revert) tracked = cleanup;
-      if (!isUnd(currentIterationProgress)) {
-        tracked.currentIteration = currentIteration;
-        tracked.iterationProgress = (alternate ? !(currentIteration % 2) ? reversed : !reversed : reversed) ? 1 - currentIterationProgress : currentIterationProgress;
-      }
-      return cleanup || noop;
-    };
-  };
-
-  // node_modules/animejs/dist/modules/utils/random.js
-  var random = (min = 0, max2 = 1, decimalLength = 0) => {
-    const m = 10 ** decimalLength;
-    return Math.floor((Math.random() * (max2 - min + 1 / m) + min) * m) / m;
-  };
-  var shuffle = (items) => {
-    let m = items.length, t, i;
-    while (m) {
-      i = random(0, --m);
-      t = items[m];
-      items[m] = items[i];
-      items[i] = t;
-    }
-    return items;
-  };
-
-  // node_modules/animejs/dist/modules/utils/stagger.js
-  var stagger = (val, params = {}) => {
-    let values = [];
-    let maxValue2 = 0;
-    const from = params.from;
-    const reversed = params.reversed;
-    const ease = params.ease;
-    const hasEasing = !isUnd(ease);
-    const hasSpring = hasEasing && !isUnd(
-      /** @type {Spring} */
-      ease.ease
-    );
-    const staggerEase = hasSpring ? (
-      /** @type {Spring} */
-      ease.ease
-    ) : hasEasing ? parseEase(ease) : null;
-    const grid = params.grid;
-    const axis = params.axis;
-    const customTotal = params.total;
-    const fromFirst = isUnd(from) || from === 0 || from === "first";
-    const fromCenter = from === "center";
-    const fromLast = from === "last";
-    const fromRandom = from === "random";
-    const isRange = isArr(val);
-    const useProp = params.use;
-    const val1 = isRange ? parseNumber(val[0]) : parseNumber(val);
-    const val2 = isRange ? parseNumber(val[1]) : 0;
-    const unitMatch = unitsExecRgx.exec((isRange ? val[1] : val) + emptyString);
-    const start = params.start || 0 + (isRange ? val1 : 0);
-    let fromIndex = fromFirst ? 0 : isNum(from) ? from : 0;
-    return (target, i, t, tl) => {
-      const [registeredTarget] = registerTargets(target);
-      const total = isUnd(customTotal) ? t : customTotal;
-      const customIndex = !isUnd(useProp) ? isFnc(useProp) ? useProp(registeredTarget, i, total) : getOriginalAnimatableValue(registeredTarget, useProp) : false;
-      const staggerIndex = isNum(customIndex) || isStr(customIndex) && isNum(+customIndex) ? +customIndex : i;
-      if (fromCenter) fromIndex = (total - 1) / 2;
-      if (fromLast) fromIndex = total - 1;
-      if (!values.length) {
-        for (let index = 0; index < total; index++) {
-          if (!grid) {
-            values.push(abs(fromIndex - index));
-          } else {
-            const fromX = !fromCenter ? fromIndex % grid[0] : (grid[0] - 1) / 2;
-            const fromY = !fromCenter ? floor(fromIndex / grid[0]) : (grid[1] - 1) / 2;
-            const toX = index % grid[0];
-            const toY = floor(index / grid[0]);
-            const distanceX = fromX - toX;
-            const distanceY = fromY - toY;
-            let value = sqrt(distanceX * distanceX + distanceY * distanceY);
-            if (axis === "x") value = -distanceX;
-            if (axis === "y") value = -distanceY;
-            values.push(value);
-          }
-          maxValue2 = max(...values);
-        }
-        if (staggerEase) values = values.map((val3) => staggerEase(val3 / maxValue2) * maxValue2);
-        if (reversed) values = values.map((val3) => axis ? val3 < 0 ? val3 * -1 : -val3 : abs(maxValue2 - val3));
-        if (fromRandom) values = shuffle(values);
-      }
-      const spacing = isRange ? (val2 - val1) / maxValue2 : val1;
-      const offset = tl ? parseTimelinePosition(tl, isUnd(params.start) ? tl.iterationDuration : start) : (
-        /** @type {Number} */
-        start
-      );
-      let output = offset + (spacing * round(values[staggerIndex], 2) || 0);
-      if (params.modifier) output = params.modifier(output);
-      if (unitMatch) output = `${output}${unitMatch[2]}`;
-      return output;
-    };
-  };
-
-  // node_modules/animejs/dist/modules/text/split.js
-  var segmenter = typeof Intl !== "undefined" && Intl.Segmenter;
-  var valueRgx = /\{value\}/g;
-  var indexRgx = /\{i\}/g;
-  var whiteSpaceGroupRgx = /(\s+)/;
-  var whiteSpaceRgx = /^\s+$/;
-  var lineType = "line";
-  var wordType = "word";
-  var charType = "char";
-  var dataLine = `data-line`;
-  var wordSegmenter = null;
-  var graphemeSegmenter = null;
-  var $splitTemplate = null;
-  var isSegmentWordLike = (seg) => {
-    return seg.isWordLike || seg.segment === " " || // Consider spaces as words first, then handle them diffrently later
-    isNum(+seg.segment);
-  };
-  var setAriaHidden = ($el) => $el.setAttribute("aria-hidden", "true");
-  var getAllTopLevelElements = ($el, type) => [.../** @type {*} */
-  $el.querySelectorAll(`[data-${type}]:not([data-${type}] [data-${type}])`)];
-  var debugColors = { line: "#00D672", word: "#FF4B4B", char: "#5A87FF" };
-  var filterEmptyElements = ($el) => {
-    if (!$el.childElementCount && !$el.textContent.trim()) {
-      const $parent = $el.parentElement;
-      $el.remove();
-      if ($parent) filterEmptyElements($parent);
-    }
-  };
-  var filterLineElements = ($el, lineIndex, bin) => {
-    const dataLineAttr = $el.getAttribute(dataLine);
-    if (dataLineAttr !== null && +dataLineAttr !== lineIndex || $el.tagName === "BR") {
-      bin.add($el);
-      const prev = $el.previousSibling;
-      const next = $el.nextSibling;
-      if (prev && prev.nodeType === 3 && whiteSpaceRgx.test(prev.textContent)) {
-        bin.add(prev);
-      }
-      if (next && next.nodeType === 3 && whiteSpaceRgx.test(next.textContent)) {
-        bin.add(next);
-      }
-    }
-    let i = $el.childElementCount;
-    while (i--) filterLineElements(
-      /** @type {HTMLElement} */
-      $el.children[i],
-      lineIndex,
-      bin
-    );
-    return bin;
-  };
-  var generateTemplate = (type, params = {}) => {
-    let template = ``;
-    const classString = isStr(params.class) ? ` class="${params.class}"` : "";
-    const cloneType = setValue(params.clone, false);
-    const wrapType = setValue(params.wrap, false);
-    const overflow = wrapType ? wrapType === true ? "clip" : wrapType : cloneType ? "clip" : false;
-    if (wrapType) template += `<span${overflow ? ` style="overflow:${overflow};"` : ""}>`;
-    template += `<span${classString}${cloneType ? ` style="position:relative;"` : ""} data-${type}="{i}">`;
-    if (cloneType) {
-      const left = cloneType === "left" ? "-100%" : cloneType === "right" ? "100%" : "0";
-      const top = cloneType === "top" ? "-100%" : cloneType === "bottom" ? "100%" : "0";
-      template += `<span>{value}</span>`;
-      template += `<span inert style="position:absolute;top:${top};left:${left};white-space:nowrap;">{value}</span>`;
-    } else {
-      template += `{value}`;
-    }
-    template += `</span>`;
-    if (wrapType) template += `</span>`;
-    return template;
-  };
-  var processHTMLTemplate = (htmlTemplate, store, node, $parentFragment, type, debug, lineIndex, wordIndex, charIndex) => {
-    const isLine = type === lineType;
-    const isChar = type === charType;
-    const className = `_${type}_`;
-    const template = isFnc(htmlTemplate) ? htmlTemplate(node) : htmlTemplate;
-    const displayStyle = isLine ? "block" : "inline-block";
-    $splitTemplate.innerHTML = template.replace(valueRgx, `<i class="${className}"></i>`).replace(indexRgx, `${isChar ? charIndex : isLine ? lineIndex : wordIndex}`);
-    const $content = $splitTemplate.content;
-    const $highestParent = (
-      /** @type {HTMLElement} */
-      $content.firstElementChild
-    );
-    const $split = (
-      /** @type {HTMLElement} */
-      $content.querySelector(`[data-${type}]`) || $highestParent
-    );
-    const $replacables = (
-      /** @type {NodeListOf<HTMLElement>} */
-      $content.querySelectorAll(`i.${className}`)
-    );
-    const replacablesLength = $replacables.length;
-    if (replacablesLength) {
-      $highestParent.style.display = displayStyle;
-      $split.style.display = displayStyle;
-      $split.setAttribute(dataLine, `${lineIndex}`);
-      if (!isLine) {
-        $split.setAttribute("data-word", `${wordIndex}`);
-        if (isChar) $split.setAttribute("data-char", `${charIndex}`);
-      }
-      let i = replacablesLength;
-      while (i--) {
-        const $replace = $replacables[i];
-        const $closestParent = $replace.parentElement;
-        $closestParent.style.display = displayStyle;
-        if (isLine) {
-          $closestParent.innerHTML = /** @type {HTMLElement} */
-          node.innerHTML;
-        } else {
-          $closestParent.replaceChild(node.cloneNode(true), $replace);
-        }
-      }
-      store.push($split);
-      $parentFragment.appendChild($content);
-    } else {
-      console.warn(`The expression "{value}" is missing from the provided template.`);
-    }
-    if (debug) $highestParent.style.outline = `1px dotted ${debugColors[type]}`;
-    return $highestParent;
-  };
-  var TextSplitter = class {
-    /**
-     * @param  {HTMLElement|NodeList|String|Array<HTMLElement>} target
-     * @param  {TextSplitterParams} [parameters]
-     */
-    constructor(target, parameters = {}) {
-      if (!wordSegmenter) wordSegmenter = segmenter ? new segmenter([], { granularity: wordType }) : {
-        segment: (text) => {
-          const segments = [];
-          const words2 = text.split(whiteSpaceGroupRgx);
-          for (let i = 0, l = words2.length; i < l; i++) {
-            const segment = words2[i];
-            segments.push({
-              segment,
-              isWordLike: !whiteSpaceRgx.test(segment)
-              // Consider non-whitespace as word-like
-            });
-          }
-          return segments;
-        }
-      };
-      if (!graphemeSegmenter) graphemeSegmenter = segmenter ? new segmenter([], { granularity: "grapheme" }) : {
-        segment: (text) => [...text].map((char) => ({ segment: char }))
-      };
-      if (!$splitTemplate && isBrowser) $splitTemplate = doc.createElement("template");
-      if (scope.current) scope.current.register(this);
-      const { words, chars, lines, accessible, includeSpaces, debug } = parameters;
-      const $target = (
-        /** @type {HTMLElement} */
-        (target = isArr(target) ? target[0] : target) && /** @type {Node} */
-        target.nodeType ? target : (getNodeList(target) || [])[0]
-      );
-      const lineParams = lines === true ? {} : lines;
-      const wordParams = words === true || isUnd(words) ? {} : words;
-      const charParams = chars === true ? {} : chars;
-      this.debug = setValue(debug, false);
-      this.includeSpaces = setValue(includeSpaces, false);
-      this.accessible = setValue(accessible, true);
-      this.linesOnly = lineParams && (!wordParams && !charParams);
-      this.lineTemplate = isObj(lineParams) ? generateTemplate(
-        lineType,
-        /** @type {SplitTemplateParams} */
-        lineParams
-      ) : lineParams;
-      this.wordTemplate = isObj(wordParams) || this.linesOnly ? generateTemplate(
-        wordType,
-        /** @type {SplitTemplateParams} */
-        wordParams
-      ) : wordParams;
-      this.charTemplate = isObj(charParams) ? generateTemplate(
-        charType,
-        /** @type {SplitTemplateParams} */
-        charParams
-      ) : charParams;
-      this.$target = $target;
-      this.html = $target && $target.innerHTML;
-      this.lines = [];
-      this.words = [];
-      this.chars = [];
-      this.effects = [];
-      this.effectsCleanups = [];
-      this.cache = null;
-      this.ready = false;
-      this.width = 0;
-      this.resizeTimeout = null;
-      const handleSplit = () => this.html && (lineParams || wordParams || charParams) && this.split();
-      this.resizeObserver = new ResizeObserver(() => {
-        clearTimeout(this.resizeTimeout);
-        this.resizeTimeout = setTimeout(() => {
-          const currentWidth = (
-            /** @type {HTMLElement} */
-            $target.offsetWidth
-          );
-          if (currentWidth === this.width) return;
-          this.width = currentWidth;
-          handleSplit();
-        }, 150);
-      });
-      if (this.lineTemplate && !this.ready) {
-        doc.fonts.ready.then(handleSplit);
-      } else {
-        handleSplit();
-      }
-      $target ? this.resizeObserver.observe($target) : console.warn("No Text Splitter target found.");
-    }
-    /**
-     * @param  {(...args: any[]) => Tickable | (() => void)} effect
-     * @return this
-     */
-    addEffect(effect) {
-      if (!isFnc(effect)) return console.warn("Effect must return a function.");
-      const refreshableEffect = keepTime(effect);
-      this.effects.push(refreshableEffect);
-      if (this.ready) this.effectsCleanups[this.effects.length - 1] = refreshableEffect(this);
-      return this;
-    }
-    revert() {
-      clearTimeout(this.resizeTimeout);
-      this.lines.length = this.words.length = this.chars.length = 0;
-      this.resizeObserver.disconnect();
-      this.effectsCleanups.forEach((cleanup) => isFnc(cleanup) ? cleanup(this) : cleanup.revert && cleanup.revert());
-      this.$target.innerHTML = this.html;
-      return this;
-    }
-    /**
-     * Recursively processes a node and its children
-     * @param {Node} node
-     */
-    splitNode(node) {
-      const wordTemplate = this.wordTemplate;
-      const charTemplate = this.charTemplate;
-      const includeSpaces = this.includeSpaces;
-      const debug = this.debug;
-      const nodeType = node.nodeType;
-      if (nodeType === 3) {
-        const nodeText = node.nodeValue;
-        if (nodeText.trim()) {
-          const tempWords = [];
-          const words = this.words;
-          const chars = this.chars;
-          const wordSegments = wordSegmenter.segment(nodeText);
-          const $wordsFragment = doc.createDocumentFragment();
-          let prevSeg = null;
-          for (const wordSegment of wordSegments) {
-            const segment = wordSegment.segment;
-            const isWordLike = isSegmentWordLike(wordSegment);
-            if (!prevSeg || isWordLike && (prevSeg && isSegmentWordLike(prevSeg))) {
-              tempWords.push(segment);
-            } else {
-              const lastWordIndex = tempWords.length - 1;
-              const lastWord = tempWords[lastWordIndex];
-              if (!whiteSpaceGroupRgx.test(lastWord) && !whiteSpaceGroupRgx.test(segment)) {
-                tempWords[lastWordIndex] += segment;
-              } else {
-                tempWords.push(segment);
-              }
-            }
-            prevSeg = wordSegment;
-          }
-          for (let i = 0, l = tempWords.length; i < l; i++) {
-            const word = tempWords[i];
-            if (!word.trim()) {
-              if (i && includeSpaces) continue;
-              $wordsFragment.appendChild(doc.createTextNode(word));
-            } else {
-              const nextWord = tempWords[i + 1];
-              const hasWordFollowingSpace = includeSpaces && nextWord && !nextWord.trim();
-              const wordToProcess = word;
-              const charSegments = charTemplate ? graphemeSegmenter.segment(wordToProcess) : null;
-              const $charsFragment = charTemplate ? doc.createDocumentFragment() : doc.createTextNode(hasWordFollowingSpace ? word + "\xA0" : word);
-              if (charTemplate) {
-                const charSegmentsArray = [...charSegments];
-                for (let j = 0, jl = charSegmentsArray.length; j < jl; j++) {
-                  const charSegment = charSegmentsArray[j];
-                  const isLastChar = j === jl - 1;
-                  const charText = isLastChar && hasWordFollowingSpace ? charSegment.segment + "\xA0" : charSegment.segment;
-                  const $charNode = doc.createTextNode(charText);
-                  processHTMLTemplate(
-                    charTemplate,
-                    chars,
-                    $charNode,
-                    /** @type {DocumentFragment} */
-                    $charsFragment,
-                    charType,
-                    debug,
-                    -1,
-                    words.length,
-                    chars.length
-                  );
-                }
-              }
-              if (wordTemplate) {
-                processHTMLTemplate(wordTemplate, words, $charsFragment, $wordsFragment, wordType, debug, -1, words.length, chars.length);
-              } else if (charTemplate) {
-                $wordsFragment.appendChild($charsFragment);
-              } else {
-                $wordsFragment.appendChild(doc.createTextNode(word));
-              }
-              if (hasWordFollowingSpace) i++;
-            }
-          }
-          node.parentNode.replaceChild($wordsFragment, node);
-        }
-      } else if (nodeType === 1) {
-        const childNodes = (
-          /** @type {Array<Node>} */
-          [.../** @type {*} */
-          node.childNodes]
-        );
-        for (let i = 0, l = childNodes.length; i < l; i++) this.splitNode(childNodes[i]);
-      }
-    }
-    /**
-     * @param {Boolean} clearCache
-     * @return {this}
-     */
-    split(clearCache = false) {
-      const $el = this.$target;
-      const isCached = !!this.cache && !clearCache;
-      const lineTemplate = this.lineTemplate;
-      const wordTemplate = this.wordTemplate;
-      const charTemplate = this.charTemplate;
-      const fontsReady = doc.fonts.status !== "loading";
-      const canSplitLines = lineTemplate && fontsReady;
-      this.ready = !lineTemplate || fontsReady;
-      if (canSplitLines || clearCache) {
-        this.effectsCleanups.forEach((cleanup) => isFnc(cleanup) && cleanup(this));
-      }
-      if (!isCached) {
-        if (clearCache) {
-          $el.innerHTML = this.html;
-          this.words.length = this.chars.length = 0;
-        }
-        this.splitNode($el);
-        this.cache = $el.innerHTML;
-      }
-      if (canSplitLines) {
-        if (isCached) $el.innerHTML = this.cache;
-        this.lines.length = 0;
-        if (wordTemplate) this.words = getAllTopLevelElements($el, wordType);
-      }
-      if (charTemplate && (canSplitLines || wordTemplate)) {
-        this.chars = getAllTopLevelElements($el, charType);
-      }
-      const elementsArray = this.words.length ? this.words : this.chars;
-      let y, linesCount = 0;
-      for (let i = 0, l = elementsArray.length; i < l; i++) {
-        const $el2 = elementsArray[i];
-        const { top, height } = $el2.getBoundingClientRect();
-        if (!isUnd(y) && top - y > height * 0.5) linesCount++;
-        $el2.setAttribute(dataLine, `${linesCount}`);
-        const nested = $el2.querySelectorAll(`[${dataLine}]`);
-        let c = nested.length;
-        while (c--) nested[c].setAttribute(dataLine, `${linesCount}`);
-        y = top;
-      }
-      if (canSplitLines) {
-        const linesFragment = doc.createDocumentFragment();
-        const parents = /* @__PURE__ */ new Set();
-        const clones = [];
-        for (let lineIndex = 0; lineIndex < linesCount + 1; lineIndex++) {
-          const $clone = (
-            /** @type {HTMLElement} */
-            $el.cloneNode(true)
-          );
-          filterLineElements($clone, lineIndex, /* @__PURE__ */ new Set()).forEach(($el2) => {
-            const $parent = $el2.parentNode;
-            if ($parent) {
-              if ($el2.nodeType === 1) parents.add(
-                /** @type {HTMLElement} */
-                $parent
-              );
-              $parent.removeChild($el2);
-            }
-          });
-          clones.push($clone);
-        }
-        parents.forEach(filterEmptyElements);
-        for (let cloneIndex = 0, clonesLength = clones.length; cloneIndex < clonesLength; cloneIndex++) {
-          processHTMLTemplate(lineTemplate, this.lines, clones[cloneIndex], linesFragment, lineType, this.debug, cloneIndex);
-        }
-        $el.innerHTML = "";
-        $el.appendChild(linesFragment);
-        if (wordTemplate) this.words = getAllTopLevelElements($el, wordType);
-        if (charTemplate) this.chars = getAllTopLevelElements($el, charType);
-      }
-      if (this.linesOnly) {
-        const words = this.words;
-        let w = words.length;
-        while (w--) {
-          const $word = words[w];
-          $word.replaceWith($word.textContent);
-        }
-        words.length = 0;
-      }
-      if (this.accessible && (canSplitLines || !isCached)) {
-        const $accessible = doc.createElement("span");
-        $accessible.style.cssText = `position:absolute;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);width:1px;height:1px;white-space:nowrap;`;
-        $accessible.innerHTML = this.html;
-        $el.insertBefore($accessible, $el.firstChild);
-        this.lines.forEach(setAriaHidden);
-        this.words.forEach(setAriaHidden);
-        this.chars.forEach(setAriaHidden);
-      }
-      this.width = /** @type {HTMLElement} */
-      $el.offsetWidth;
-      if (canSplitLines || clearCache) {
-        this.effects.forEach((effect, i) => this.effectsCleanups[i] = effect(this));
-      }
-      return this;
-    }
-    refresh() {
-      this.split(true);
-    }
-  };
-  var splitText = (target, parameters) => new TextSplitter(target, parameters);
-
   // node_modules/gsap/gsap-core.js
   function _assertThisInitialized(self) {
     if (self === void 0) {
@@ -3053,8 +78,8 @@
   var _globals = {};
   var _installScope = {};
   var _coreReady;
-  var _install = function _install2(scope2) {
-    return (_installScope = _merge(scope2, _globals)) && gsap;
+  var _install = function _install2(scope) {
+    return (_installScope = _merge(scope, _globals)) && gsap;
   };
   var _missingPlugin = function _missingPlugin2(property, value) {
     return console.warn("Invalid property", property, "set to", value, "Missing plugin? gsap.registerPlugin()");
@@ -3113,7 +138,7 @@
   var _forEachName = function _forEachName2(names, func) {
     return (names = names.split(",")).forEach(func) || names;
   };
-  var _round2 = function _round3(value) {
+  var _round = function _round2(value) {
     return Math.round(value * 1e5) / 1e5 || 0;
   };
   var _roundPrecise = function _roundPrecise2(value) {
@@ -3154,16 +179,16 @@
   var _passThrough = function _passThrough2(p) {
     return p;
   };
-  var _setDefaults = function _setDefaults2(obj, defaults3) {
-    for (var p in defaults3) {
-      p in obj || (obj[p] = defaults3[p]);
+  var _setDefaults = function _setDefaults2(obj, defaults2) {
+    for (var p in defaults2) {
+      p in obj || (obj[p] = defaults2[p]);
     }
     return obj;
   };
   var _setKeyframeDefaults = function _setKeyframeDefaults2(excludeDuration) {
-    return function(obj, defaults3) {
-      for (var p in defaults3) {
-        p in obj || p === "duration" && excludeDuration || p === "ease" || (obj[p] = defaults3[p]);
+    return function(obj, defaults2) {
+      for (var p in defaults2) {
+        p in obj || p === "duration" && excludeDuration || p === "ease" || (obj[p] = defaults2[p]);
       }
     };
   };
@@ -3474,15 +499,15 @@
   var _conditionalReturn = function _conditionalReturn2(value, func) {
     return value || value === 0 ? func(value) : func;
   };
-  var _clamp = function _clamp2(min, max2, value) {
-    return value < min ? min : value > max2 ? max2 : value;
+  var _clamp = function _clamp2(min, max, value) {
+    return value < min ? min : value > max ? max : value;
   };
   var getUnit = function getUnit2(value, v) {
     return !_isString(value) || !(v = _unitExp.exec(value)) ? "" : v[1];
   };
-  var clamp2 = function clamp3(min, max2, value) {
+  var clamp = function clamp2(min, max, value) {
     return _conditionalReturn(value, function(v) {
-      return _clamp(min, max2, v);
+      return _clamp(min, max, v);
     });
   };
   var _slice = [].slice;
@@ -3498,8 +523,8 @@
       return _isString(value) && !leaveStrings || _isArrayLike(value, 1) ? (_accumulator = accumulator).push.apply(_accumulator, toArray(value)) : accumulator.push(value);
     }) || accumulator;
   };
-  var toArray = function toArray2(value, scope2, leaveStrings) {
-    return _context && !scope2 && _context.selector ? _context.selector(value) : _isString(value) && !leaveStrings && (_coreInitted || !_wake()) ? _slice.call((scope2 || _doc).querySelectorAll(value), 0) : _isArray(value) ? _flatten(value, leaveStrings) : _isArrayLike(value) ? _slice.call(value, 0) : value ? [value] : [];
+  var toArray = function toArray2(value, scope, leaveStrings) {
+    return _context && !scope && _context.selector ? _context.selector(value) : _isString(value) && !leaveStrings && (_coreInitted || !_wake()) ? _slice.call((scope || _doc).querySelectorAll(value), 0) : _isArray(value) ? _flatten(value, leaveStrings) : _isArrayLike(value) ? _slice.call(value, 0) : value ? [value] : [];
   };
   var selector = function selector2(value) {
     value = toArray(value)[0] || _warn("Invalid scope") || {};
@@ -3508,7 +533,7 @@
       return toArray(v, el.querySelectorAll ? el : el === value ? _warn("Invalid scope") || _doc.createElement("div") : value);
     };
   };
-  var shuffle2 = function shuffle3(a) {
+  var shuffle = function shuffle2(a) {
     return a.sort(function() {
       return 0.5 - Math.random();
     });
@@ -3531,29 +556,29 @@
       ratioY = from[1];
     }
     return function(i, target, a) {
-      var l = (a || vars).length, distances = cache[l], originX, originY, x, y, d, j, max2, min, wrapAt;
+      var l = (a || vars).length, distances = cache[l], originX, originY, x, y, d, j, max, min, wrapAt;
       if (!distances) {
         wrapAt = vars.grid === "auto" ? 0 : (vars.grid || [1, _bigNum])[1];
         if (!wrapAt) {
-          max2 = -_bigNum;
-          while (max2 < (max2 = a[wrapAt++].getBoundingClientRect().left) && wrapAt < l) {
+          max = -_bigNum;
+          while (max < (max = a[wrapAt++].getBoundingClientRect().left) && wrapAt < l) {
           }
           wrapAt < l && wrapAt--;
         }
         distances = cache[l] = [];
         originX = ratios ? Math.min(wrapAt, l) * ratioX - 0.5 : from % wrapAt;
         originY = wrapAt === _bigNum ? 0 : ratios ? l * ratioY / wrapAt - 0.5 : from / wrapAt | 0;
-        max2 = 0;
+        max = 0;
         min = _bigNum;
         for (j = 0; j < l; j++) {
           x = j % wrapAt - originX;
           y = originY - (j / wrapAt | 0);
           distances[j] = d = !axis ? _sqrt(x * x + y * y) : Math.abs(axis === "y" ? y : x);
-          d > max2 && (max2 = d);
+          d > max && (max = d);
           d < min && (min = d);
         }
-        from === "random" && shuffle2(distances);
-        distances.max = max2 - min;
+        from === "random" && shuffle(distances);
+        distances.max = max - min;
         distances.min = min;
         distances.v = l = (parseFloat(vars.amount) || parseFloat(vars.each) * (wrapAt > l ? l - 1 : !axis ? Math.max(wrapAt, l / wrapAt) : axis === "y" ? l / wrapAt : wrapAt) || 0) * (from === "edges" ? -1 : 1);
         distances.b = l < 0 ? base - l : base;
@@ -3606,9 +631,9 @@
       return is2D || closest === raw || _isNumber(raw) ? closest : closest + getUnit(raw);
     });
   };
-  var random2 = function random3(min, max2, roundingIncrement, returnFunction) {
-    return _conditionalReturn(_isArray(min) ? !max2 : roundingIncrement === true ? !!(roundingIncrement = 0) : !returnFunction, function() {
-      return _isArray(min) ? min[~~(Math.random() * min.length)] : (roundingIncrement = roundingIncrement || 1e-5) && (returnFunction = roundingIncrement < 1 ? Math.pow(10, (roundingIncrement + "").length - 2) : 1) && Math.floor(Math.round((min - roundingIncrement / 2 + Math.random() * (max2 - min + roundingIncrement * 0.99)) / roundingIncrement) * roundingIncrement * returnFunction) / returnFunction;
+  var random = function random2(min, max, roundingIncrement, returnFunction) {
+    return _conditionalReturn(_isArray(min) ? !max : roundingIncrement === true ? !!(roundingIncrement = 0) : !returnFunction, function() {
+      return _isArray(min) ? min[~~(Math.random() * min.length)] : (roundingIncrement = roundingIncrement || 1e-5) && (returnFunction = roundingIncrement < 1 ? Math.pow(10, (roundingIncrement + "").length - 2) : 1) && Math.floor(Math.round((min - roundingIncrement / 2 + Math.random() * (max - min + roundingIncrement * 0.99)) / roundingIncrement) * roundingIncrement * returnFunction) / returnFunction;
     });
   };
   var pipe = function pipe2() {
@@ -3626,23 +651,23 @@
       return func(parseFloat(value)) + (unit || getUnit(value));
     };
   };
-  var normalize = function normalize2(min, max2, value) {
-    return mapRange(min, max2, 0, 1, value);
+  var normalize = function normalize2(min, max, value) {
+    return mapRange(min, max, 0, 1, value);
   };
   var _wrapArray = function _wrapArray2(a, wrapper, value) {
     return _conditionalReturn(value, function(index) {
       return a[~~wrapper(index)];
     });
   };
-  var wrap = function wrap2(min, max2, value) {
-    var range = max2 - min;
-    return _isArray(min) ? _wrapArray(min, wrap2(0, min.length), max2) : _conditionalReturn(value, function(value2) {
+  var wrap = function wrap2(min, max, value) {
+    var range = max - min;
+    return _isArray(min) ? _wrapArray(min, wrap2(0, min.length), max) : _conditionalReturn(value, function(value2) {
       return (range + (value2 - min) % range) % range + min;
     });
   };
-  var wrapYoyo = function wrapYoyo2(min, max2, value) {
-    var range = max2 - min, total = range * 2;
-    return _isArray(min) ? _wrapArray(min, wrapYoyo2(0, min.length - 1), max2) : _conditionalReturn(value, function(value2) {
+  var wrapYoyo = function wrapYoyo2(min, max, value) {
+    var range = max - min, total = range * 2;
+    return _isArray(min) ? _wrapArray(min, wrapYoyo2(0, min.length - 1), max) : _conditionalReturn(value, function(value2) {
       value2 = (total + (value2 - min) % total) % total || 0;
       return min + (value2 > range ? total - value2 : value2);
     });
@@ -3650,7 +675,7 @@
   var _replaceRandom = function _replaceRandom2(s) {
     return s.replace(_randomExp, function(match) {
       var arIndex = match.indexOf("[") + 1, values = match.substring(arIndex || 7, arIndex ? match.indexOf("]") : match.length - 1).split(_commaDelimExp);
-      return random2(arIndex ? values : +values[0], arIndex ? 0 : +values[1], +values[2] || 1e-5);
+      return random(arIndex ? values : +values[0], arIndex ? 0 : +values[1], +values[2] || 1e-5);
     });
   };
   var mapRange = function mapRange2(inMin, inMax, outMin, outMax, value) {
@@ -3659,13 +684,13 @@
       return outMin + ((value2 - inMin) / inRange * outRange || 0);
     });
   };
-  var interpolate = function interpolate2(start, end, progress2, mutate) {
+  var interpolate = function interpolate2(start, end, progress, mutate) {
     var func = isNaN(start + end) ? 0 : function(p2) {
       return (1 - p2) * start + p2 * end;
     };
     if (!func) {
       var isString2 = _isString(start), master = {}, p, i, interpolators, l, il;
-      progress2 === true && (mutate = 1) && (progress2 = null);
+      progress === true && (mutate = 1) && (progress = null);
       if (isString2) {
         start = {
           p: start
@@ -3686,7 +711,7 @@
           var i2 = Math.min(il, ~~p2);
           return interpolators[i2](p2 - i2);
         };
-        progress2 = end;
+        progress = end;
       } else if (!mutate) {
         start = _merge(_isArray(start) ? [] : {}, start);
       }
@@ -3699,7 +724,7 @@
         };
       }
     }
-    return _conditionalReturn(progress2, func);
+    return _conditionalReturn(progress, func);
   };
   var _getLabelInDirection = function _getLabelInDirection2(timeline2, fromTime, backward) {
     var labels = timeline2.labels, min = _bigNum, p, distance, label;
@@ -3713,15 +738,15 @@
     return label;
   };
   var _callback = function _callback2(animation, type, executeLazyFirst) {
-    var v = animation.vars, callback = v[type], prevContext = _context, context3 = animation._ctx, params, scope2, result;
+    var v = animation.vars, callback = v[type], prevContext = _context, context3 = animation._ctx, params, scope, result;
     if (!callback) {
       return;
     }
     params = v[type + "Params"];
-    scope2 = v.callbackScope || animation;
+    scope = v.callbackScope || animation;
     executeLazyFirst && _lazyTweens.length && _lazyRender();
     context3 && (_context = context3);
-    result = params ? callback.apply(scope2, params) : callback.call(scope2);
+    result = params ? callback.apply(scope, params) : callback.call(scope);
     _context = prevContext;
     return result;
   };
@@ -3800,7 +825,7 @@
     return (h * 6 < 1 ? m1 + (m2 - m1) * h * 6 : h < 0.5 ? m2 : h * 3 < 2 ? m1 + (m2 - m1) * (2 / 3 - h) * 6 : m1) * _255 + 0.5 | 0;
   };
   var splitColor = function splitColor2(v, toHSL, forceAlpha) {
-    var a = !v ? _colorLookup.black : _isNumber(v) ? [v >> 16, v >> 8 & _255, v & _255] : 0, r, g, b, h, s, l, max2, min, d, wasHSL;
+    var a = !v ? _colorLookup.black : _isNumber(v) ? [v >> 16, v >> 8 & _255, v & _255] : 0, r, g, b, h, s, l, max, min, d, wasHSL;
     if (!a) {
       if (v.substr(-1) === ",") {
         v = v.substr(0, v.length - 1);
@@ -3846,15 +871,15 @@
       r = a[0] / _255;
       g = a[1] / _255;
       b = a[2] / _255;
-      max2 = Math.max(r, g, b);
+      max = Math.max(r, g, b);
       min = Math.min(r, g, b);
-      l = (max2 + min) / 2;
-      if (max2 === min) {
+      l = (max + min) / 2;
+      if (max === min) {
         h = s = 0;
       } else {
-        d = max2 - min;
-        s = l > 0.5 ? d / (2 - max2 - min) : d / (max2 + min);
-        h = max2 === r ? (g - b) / d + (g < b ? 6 : 0) : max2 === g ? (b - r) / d + 2 : (r - g) / d + 4;
+        d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
         h *= 60;
       }
       a[0] = ~~(h + 0.5);
@@ -3879,8 +904,8 @@
     if (!colors) {
       return s;
     }
-    colors = colors.map(function(color2) {
-      return (color2 = splitColor(color2, toHSL, 1)) && type + (toHSL ? color2[0] + "," + color2[1] + "%," + color2[2] + "%," + color2[3] : color2.join(",")) + ")";
+    colors = colors.map(function(color) {
+      return (color = splitColor(color, toHSL, 1)) && type + (toHSL ? color[0] + "," + color[1] + "%," + color[2] + "%," + color[3] : color.join(",")) + ")";
     });
     if (orderMatchData) {
       d = _colorOrderData(s);
@@ -3923,13 +948,13 @@
   var _tickerActive;
   var _ticker = (function() {
     var _getTime = Date.now, _lagThreshold = 500, _adjustedLag = 33, _startTime = _getTime(), _lastUpdate = _startTime, _gap = 1e3 / 240, _nextTime = _gap, _listeners2 = [], _id, _req, _raf, _self, _delta, _i, _tick = function _tick2(v) {
-      var elapsed = _getTime() - _lastUpdate, manual = v === true, overlap, dispatch, time, frame2;
+      var elapsed = _getTime() - _lastUpdate, manual = v === true, overlap, dispatch, time, frame;
       (elapsed > _lagThreshold || elapsed < 0) && (_startTime += elapsed - _adjustedLag);
       _lastUpdate += elapsed;
       time = _lastUpdate - _startTime;
       overlap = time - _nextTime;
       if (overlap > 0 || manual) {
-        frame2 = ++_self.frame;
+        frame = ++_self.frame;
         _delta = time - _self.time * 1e3;
         _self.time = time = time / 1e3;
         _nextTime += overlap + (overlap >= _gap ? 4 : _gap - overlap);
@@ -3938,14 +963,14 @@
       manual || (_id = _req(_tick2));
       if (dispatch) {
         for (_i = 0; _i < _listeners2.length; _i++) {
-          _listeners2[_i](time, _delta, frame2, v);
+          _listeners2[_i](time, _delta, frame, v);
         }
       }
     };
     _self = {
       time: 0,
       frame: 0,
-      tick: function tick2() {
+      tick: function tick() {
         _tick(true);
       },
       deltaRatio: function deltaRatio(fps) {
@@ -4007,13 +1032,13 @@
   var _customEaseExp = /^[\d.\-M][\d.\-,\s]/;
   var _quotesExp = /["']/g;
   var _parseObjectInString = function _parseObjectInString2(value) {
-    var obj = {}, split3 = value.substr(1, value.length - 3).split(":"), key2 = split3[0], i = 1, l = split3.length, index, val, parsedVal;
+    var obj = {}, split2 = value.substr(1, value.length - 3).split(":"), key = split2[0], i = 1, l = split2.length, index, val, parsedVal;
     for (; i < l; i++) {
-      val = split3[i];
+      val = split2[i];
       index = i !== l - 1 ? val.lastIndexOf(",") : val.length;
       parsedVal = val.substr(0, index);
-      obj[key2] = isNaN(parsedVal) ? parsedVal.replace(_quotesExp, "").trim() : +parsedVal;
-      key2 = val.substr(index + 1).trim();
+      obj[key] = isNaN(parsedVal) ? parsedVal.replace(_quotesExp, "").trim() : +parsedVal;
+      key = val.substr(index + 1).trim();
     }
     return obj;
   };
@@ -4022,8 +1047,8 @@
     return value.substring(open, ~nested && nested < close ? value.indexOf(")", close + 1) : close);
   };
   var _configEaseFromString = function _configEaseFromString2(name) {
-    var split3 = (name + "").split("("), ease = _easeMap[split3[0]];
-    return ease && split3.length > 1 && ease.config ? ease.config.apply(null, ~name.indexOf("{") ? [_parseObjectInString(split3[1])] : _valueInParentheses(name).split(",").map(_numericIfPossible)) : _easeMap._CE && _customEaseExp.test(name) ? _easeMap._CE("", name) : ease;
+    var split2 = (name + "").split("("), ease = _easeMap[split2[0]];
+    return ease && split2.length > 1 && ease.config ? ease.config.apply(null, ~name.indexOf("{") ? [_parseObjectInString(split2[1])] : _valueInParentheses(name).split(",").map(_numericIfPossible)) : _easeMap._CE && _customEaseExp.test(name) ? _easeMap._CE("", name) : ease;
   };
   var _invertEase = function _invertEase2(ease) {
     return function(p) {
@@ -4144,9 +1169,9 @@
       if (steps === void 0) {
         steps = 1;
       }
-      var p1 = 1 / steps, p2 = steps + (immediateStart ? 0 : 1), p3 = immediateStart ? 1 : 0, max2 = 1 - _tinyNum;
+      var p1 = 1 / steps, p2 = steps + (immediateStart ? 0 : 1), p3 = immediateStart ? 1 : 0, max = 1 - _tinyNum;
       return function(p) {
-        return ((p2 * _clamp(0, max2, p) | 0) + p3) * p1;
+        return ((p2 * _clamp(0, max, p) | 0) + p3) * p1;
       };
     }
   };
@@ -4229,7 +1254,7 @@
     _proto.totalProgress = function totalProgress(value, suppressEvents) {
       return arguments.length ? this.totalTime(this.totalDuration() * value, suppressEvents) : this.totalDuration() ? Math.min(1, this._tTime / this._tDur) : this.rawTime() >= 0 && this._initted ? 1 : 0;
     };
-    _proto.progress = function progress2(value, suppressEvents) {
+    _proto.progress = function progress(value, suppressEvents) {
       return arguments.length ? this.totalTime(this.duration() * (this._yoyo && !(this.iteration() & 1) ? 1 - value : value) + _elapsedCycleDuration(this), suppressEvents) : this.duration() ? Math.min(1, this._time / this._dur) : this.rawTime() > 0 ? 1 : 0;
     };
     _proto.iteration = function iteration(value, suppressEvents) {
@@ -4466,26 +1491,26 @@
     _proto2.call = function call(callback, params, position) {
       return _addToTimeline(this, Tween.delayedCall(0, callback, params), position);
     };
-    _proto2.staggerTo = function staggerTo(targets, duration, vars, stagger2, position, onCompleteAll, onCompleteAllParams) {
+    _proto2.staggerTo = function staggerTo(targets, duration, vars, stagger, position, onCompleteAll, onCompleteAllParams) {
       vars.duration = duration;
-      vars.stagger = vars.stagger || stagger2;
+      vars.stagger = vars.stagger || stagger;
       vars.onComplete = onCompleteAll;
       vars.onCompleteParams = onCompleteAllParams;
       vars.parent = this;
       new Tween(targets, vars, _parsePosition(this, position));
       return this;
     };
-    _proto2.staggerFrom = function staggerFrom(targets, duration, vars, stagger2, position, onCompleteAll, onCompleteAllParams) {
+    _proto2.staggerFrom = function staggerFrom(targets, duration, vars, stagger, position, onCompleteAll, onCompleteAllParams) {
       vars.runBackwards = 1;
       _inheritDefaults(vars).immediateRender = _isNotFalse(vars.immediateRender);
-      return this.staggerTo(targets, duration, vars, stagger2, position, onCompleteAll, onCompleteAllParams);
+      return this.staggerTo(targets, duration, vars, stagger, position, onCompleteAll, onCompleteAllParams);
     };
-    _proto2.staggerFromTo = function staggerFromTo(targets, duration, fromVars, toVars, stagger2, position, onCompleteAll, onCompleteAllParams) {
+    _proto2.staggerFromTo = function staggerFromTo(targets, duration, fromVars, toVars, stagger, position, onCompleteAll, onCompleteAllParams) {
       toVars.startAt = fromVars;
       _inheritDefaults(toVars).immediateRender = _isNotFalse(toVars.immediateRender);
-      return this.staggerTo(targets, duration, toVars, stagger2, position, onCompleteAll, onCompleteAllParams);
+      return this.staggerTo(targets, duration, toVars, stagger, position, onCompleteAll, onCompleteAllParams);
     };
-    _proto2.render = function render4(totalTime, suppressEvents, force) {
+    _proto2.render = function render3(totalTime, suppressEvents, force) {
       var prevTime = this._time, tDur = this._dirty ? this.totalDuration() : this._tDur, dur = this._dur, tTime = totalTime <= 0 ? 0 : _roundPrecise(totalTime), crossingStart = this._zTime < 0 !== totalTime < 0 && (this._initted || !dur), time, child, next, iteration, cycleDuration, prevPaused, pauseTween, timeScale, prevStart, prevIteration, yoyo, isYoyo;
       this !== _globalTimeline && tTime > tDur && totalTime >= 0 && (tTime = tDur);
       if (tTime !== this._tTime || force || crossingStart) {
@@ -4855,7 +1880,7 @@
       return _uncache(this);
     };
     _proto2.totalDuration = function totalDuration(value) {
-      var max2 = 0, self = this, child = self._last, prevStart = _bigNum, prev, start, parent;
+      var max = 0, self = this, child = self._last, prevStart = _bigNum, prev, start, parent;
       if (arguments.length) {
         return self.timeScale((self._repeat < 0 ? self.duration() : self.totalDuration()) / (self.reversed() ? -value : value));
       }
@@ -4872,7 +1897,7 @@
             prevStart = start;
           }
           if (start < 0 && child._ts) {
-            max2 -= start;
+            max -= start;
             if (!parent && !self._dp || parent && parent.smoothChildTiming) {
               self._start += _roundPrecise(start / self._ts);
               self._time -= start;
@@ -4881,10 +1906,10 @@
             self.shiftChildren(-start, false, -Infinity);
             prevStart = 0;
           }
-          child._end > max2 && child._ts && (max2 = child._end);
+          child._end > max && child._ts && (max = child._end);
           child = prev;
         }
-        _setDuration(self, self === _globalTimeline && self._time > max2 ? self._time : max2, 1, 1);
+        _setDuration(self, self === _globalTimeline && self._time > max ? self._time : max, 1, 1);
         self._dirty = 0;
       }
       return self._tDur;
@@ -4915,7 +1940,7 @@
     _forcing: 0
   });
   var _addComplexStringPropTween = function _addComplexStringPropTween2(target, prop, start, end, setter, stringFilter, funcParam) {
-    var pt = new PropTween(this._pt, target, prop, 0, 1, _renderComplexString, null, setter), index = 0, matchIndex = 0, result, startNums, color2, endNum, chunk, startNum, hasRandom, a;
+    var pt = new PropTween(this._pt, target, prop, 0, 1, _renderComplexString, null, setter), index = 0, matchIndex = 0, result, startNums, color, endNum, chunk, startNum, hasRandom, a;
     pt.b = start;
     pt.e = end;
     start += "";
@@ -4933,10 +1958,10 @@
     while (result = _complexStringNumExp.exec(end)) {
       endNum = result[0];
       chunk = end.substring(index, result.index);
-      if (color2) {
-        color2 = (color2 + 1) % 5;
+      if (color) {
+        color = (color + 1) % 5;
       } else if (chunk.substr(-5) === "rgba(") {
-        color2 = 1;
+        color = 1;
       }
       if (endNum !== startNums[matchIndex++]) {
         startNum = parseFloat(startNums[matchIndex - 1]) || 0;
@@ -4946,7 +1971,7 @@
           //note: SVG spec allows omission of comma/space when a negative sign is wedged between two numbers, like 2.5-5.3 instead of 2.5,-5.3 but when tweening, the negative value may switch to positive, so we insert the comma just in case.
           s: startNum,
           c: endNum.charAt(1) === "=" ? _parseRelative(startNum, endNum) - startNum : parseFloat(endNum) - startNum,
-          m: color2 && color2 < 4 ? Math.round : 0
+          m: color && color < 4 ? Math.round : 0
         };
         index = _complexStringNumExp.lastIndex;
       }
@@ -5012,8 +2037,8 @@
   var _overwritingTween;
   var _forceAllPropTweens;
   var _initTween = function _initTween2(tween, time, tTime) {
-    var vars = tween.vars, ease = vars.ease, startAt = vars.startAt, immediateRender = vars.immediateRender, lazy = vars.lazy, onUpdate = vars.onUpdate, runBackwards = vars.runBackwards, yoyoEase = vars.yoyoEase, keyframes2 = vars.keyframes, autoRevert = vars.autoRevert, dur = tween._dur, prevStartAt = tween._startAt, targets = tween._targets, parent = tween.parent, fullTargets = parent && parent.data === "nested" ? parent.vars.targets : targets, autoOverwrite = tween._overwrite === "auto" && !_suppressOverwrites, tl = tween.timeline, cleanVars, i, p, pt, target, hasPriority, gsData, harness, plugin, ptLookup, index, harnessVars, overwritten;
-    tl && (!keyframes2 || !ease) && (ease = "none");
+    var vars = tween.vars, ease = vars.ease, startAt = vars.startAt, immediateRender = vars.immediateRender, lazy = vars.lazy, onUpdate = vars.onUpdate, runBackwards = vars.runBackwards, yoyoEase = vars.yoyoEase, keyframes = vars.keyframes, autoRevert = vars.autoRevert, dur = tween._dur, prevStartAt = tween._startAt, targets = tween._targets, parent = tween.parent, fullTargets = parent && parent.data === "nested" ? parent.vars.targets : targets, autoOverwrite = tween._overwrite === "auto" && !_suppressOverwrites, tl = tween.timeline, cleanVars, i, p, pt, target, hasPriority, gsData, harness, plugin, ptLookup, index, harnessVars, overwritten;
+    tl && (!keyframes || !ease) && (ease = "none");
     tween._ease = _parseEase(ease, _defaults.ease);
     tween._yEase = yoyoEase ? _invertEase(_parseEase(yoyoEase === true ? ease : yoyoEase, _defaults.ease)) : 0;
     if (yoyoEase && tween._yoyo && !tween._repeat) {
@@ -5022,7 +2047,7 @@
       tween._ease = yoyoEase;
     }
     tween._from = !tl && !!vars.runBackwards;
-    if (!tl || keyframes2 && !vars.stagger) {
+    if (!tl || keyframes && !vars.stagger) {
       harness = targets[0] ? _getCache(targets[0]).harness : 0;
       harnessVars = harness && vars[harness.prop];
       cleanVars = _copyExcluding(vars, _reservedProps);
@@ -5119,7 +2144,7 @@
     }
     tween._onUpdate = onUpdate;
     tween._initted = (!tween._op || tween._pt) && !overwritten;
-    keyframes2 && time <= 0 && tl.render(_bigNum, true, true);
+    keyframes && time <= 0 && tl.render(_bigNum, true, true);
   };
   var _updatePropTweens = function _updatePropTweens2(tween, property, value, start, startIsRelative, ratio, time, skipRecursion) {
     var ptCache = (tween._pt && tween._ptCache || (tween._ptCache = {}))[property], pt, rootPT, lookup, i;
@@ -5151,7 +2176,7 @@
       pt = rootPT._pt || rootPT;
       pt.s = (start || start === 0) && !startIsRelative ? start : pt.s + (start || 0) + ratio * pt.c;
       pt.c = value - pt.s;
-      rootPT.e && (rootPT.e = _round2(value) + getUnit(rootPT.e));
+      rootPT.e && (rootPT.e = _round(value) + getUnit(rootPT.e));
       rootPT.b && (rootPT.b = pt.s + getUnit(rootPT.b));
     }
   };
@@ -5212,28 +2237,28 @@
         position = null;
       }
       _this3 = _Animation2.call(this, skipInherit ? vars : _inheritDefaults(vars)) || this;
-      var _this3$vars = _this3.vars, duration = _this3$vars.duration, delay = _this3$vars.delay, immediateRender = _this3$vars.immediateRender, stagger2 = _this3$vars.stagger, overwrite = _this3$vars.overwrite, keyframes2 = _this3$vars.keyframes, defaults3 = _this3$vars.defaults, scrollTrigger = _this3$vars.scrollTrigger, yoyoEase = _this3$vars.yoyoEase, parent = vars.parent || _globalTimeline, parsedTargets = (_isArray(targets) || _isTypedArray(targets) ? _isNumber(targets[0]) : "length" in vars) ? [targets] : toArray(targets), tl, i, copy, l, p, curTarget, staggerFunc, staggerVarsToMerge;
+      var _this3$vars = _this3.vars, duration = _this3$vars.duration, delay = _this3$vars.delay, immediateRender = _this3$vars.immediateRender, stagger = _this3$vars.stagger, overwrite = _this3$vars.overwrite, keyframes = _this3$vars.keyframes, defaults2 = _this3$vars.defaults, scrollTrigger = _this3$vars.scrollTrigger, yoyoEase = _this3$vars.yoyoEase, parent = vars.parent || _globalTimeline, parsedTargets = (_isArray(targets) || _isTypedArray(targets) ? _isNumber(targets[0]) : "length" in vars) ? [targets] : toArray(targets), tl, i, copy, l, p, curTarget, staggerFunc, staggerVarsToMerge;
       _this3._targets = parsedTargets.length ? _harness(parsedTargets) : _warn("GSAP target " + targets + " not found. https://gsap.com", !_config.nullTargetWarn) || [];
       _this3._ptLookup = [];
       _this3._overwrite = overwrite;
-      if (keyframes2 || stagger2 || _isFuncOrString(duration) || _isFuncOrString(delay)) {
+      if (keyframes || stagger || _isFuncOrString(duration) || _isFuncOrString(delay)) {
         vars = _this3.vars;
         tl = _this3.timeline = new Timeline({
           data: "nested",
-          defaults: defaults3 || {},
+          defaults: defaults2 || {},
           targets: parent && parent.data === "nested" ? parent.vars.targets : parsedTargets
         });
         tl.kill();
         tl.parent = tl._dp = _assertThisInitialized(_this3);
         tl._start = 0;
-        if (stagger2 || _isFuncOrString(duration) || _isFuncOrString(delay)) {
+        if (stagger || _isFuncOrString(duration) || _isFuncOrString(delay)) {
           l = parsedTargets.length;
-          staggerFunc = stagger2 && distribute(stagger2);
-          if (_isObject(stagger2)) {
-            for (p in stagger2) {
+          staggerFunc = stagger && distribute(stagger);
+          if (_isObject(stagger)) {
+            for (p in stagger) {
               if (~_staggerTweenProps.indexOf(p)) {
                 staggerVarsToMerge || (staggerVarsToMerge = {});
-                staggerVarsToMerge[p] = stagger2[p];
+                staggerVarsToMerge[p] = stagger[p];
               }
             }
           }
@@ -5245,7 +2270,7 @@
             curTarget = parsedTargets[i];
             copy.duration = +_parseFuncOrString(duration, _assertThisInitialized(_this3), i, curTarget, parsedTargets);
             copy.delay = (+_parseFuncOrString(delay, _assertThisInitialized(_this3), i, curTarget, parsedTargets) || 0) - _this3._delay;
-            if (!stagger2 && l === 1 && copy.delay) {
+            if (!stagger && l === 1 && copy.delay) {
               _this3._delay = delay = copy.delay;
               _this3._start += delay;
               copy.delay = 0;
@@ -5254,21 +2279,21 @@
             tl._ease = _easeMap.none;
           }
           tl.duration() ? duration = delay = 0 : _this3.timeline = 0;
-        } else if (keyframes2) {
+        } else if (keyframes) {
           _inheritDefaults(_setDefaults(tl.vars.defaults, {
             ease: "none"
           }));
-          tl._ease = _parseEase(keyframes2.ease || vars.ease || "none");
+          tl._ease = _parseEase(keyframes.ease || vars.ease || "none");
           var time = 0, a, kf, v;
-          if (_isArray(keyframes2)) {
-            keyframes2.forEach(function(frame2) {
-              return tl.to(parsedTargets, frame2, ">");
+          if (_isArray(keyframes)) {
+            keyframes.forEach(function(frame) {
+              return tl.to(parsedTargets, frame, ">");
             });
             tl.duration();
           } else {
             copy = {};
-            for (p in keyframes2) {
-              p === "ease" || p === "easeEach" || _parseKeyframe(p, keyframes2[p], copy, keyframes2.easeEach);
+            for (p in keyframes) {
+              p === "ease" || p === "easeEach" || _parseKeyframe(p, keyframes[p], copy, keyframes.easeEach);
             }
             for (p in copy) {
               a = copy[p].sort(function(a2, b) {
@@ -5303,7 +2328,7 @@
       _addToTimeline(parent, _assertThisInitialized(_this3), position);
       vars.reversed && _this3.reverse();
       vars.paused && _this3.paused(true);
-      if (immediateRender || !duration && !keyframes2 && _this3._start === _roundPrecise(parent._time) && _isNotFalse(immediateRender) && _hasNoPausedAncestors(_assertThisInitialized(_this3)) && parent.data !== "nested") {
+      if (immediateRender || !duration && !keyframes && _this3._start === _roundPrecise(parent._time) && _isNotFalse(immediateRender) && _hasNoPausedAncestors(_assertThisInitialized(_this3)) && parent.data !== "nested") {
         _this3._tTime = -_tinyNum;
         _this3.render(Math.max(0, -delay) || 0);
       }
@@ -5311,7 +2336,7 @@
       return _this3;
     }
     var _proto3 = Tween2.prototype;
-    _proto3.render = function render4(totalTime, suppressEvents, force) {
+    _proto3.render = function render3(totalTime, suppressEvents, force) {
       var prevTime = this._time, tDur = this._tDur, dur = this._dur, isNegative = totalTime < 0, tTime = totalTime > tDur - _tinyNum && !isNegative ? tDur : totalTime < _tinyNum ? 0 : totalTime, time, pt, iteration, cycleDuration, prevIteration, isYoyo, ratio, timeline2, yoyoEase;
       if (!dur) {
         _renderZeroDurationTween(this, totalTime, suppressEvents, force);
@@ -5494,7 +2519,7 @@
     Tween2.from = function from(targets, vars) {
       return _createTweenType(1, arguments);
     };
-    Tween2.delayedCall = function delayedCall(delay, callback, params, scope2) {
+    Tween2.delayedCall = function delayedCall(delay, callback, params, scope) {
       return new Tween2(callback, 0, {
         immediateRender: false,
         lazy: false,
@@ -5504,7 +2529,7 @@
         onReverseComplete: callback,
         onCompleteParams: params,
         onReverseCompleteParams: params,
-        callbackScope: scope2
+        callbackScope: scope
       });
     };
     Tween2.fromTo = function fromTo(targets, fromVars, toVars) {
@@ -5701,8 +2726,8 @@
     }
   };
   var Context = /* @__PURE__ */ (function() {
-    function Context2(func, scope2) {
-      this.selector = scope2 && selector(scope2);
+    function Context2(func, scope) {
+      this.selector = scope && selector(scope);
       this.data = [];
       this._r = [];
       this.isReverted = false;
@@ -5710,16 +2735,16 @@
       func && this.add(func);
     }
     var _proto5 = Context2.prototype;
-    _proto5.add = function add(name, func, scope2) {
+    _proto5.add = function add(name, func, scope) {
       if (_isFunction(name)) {
-        scope2 = func;
+        scope = func;
         func = name;
         name = _isFunction;
       }
       var self = this, f = function f2() {
         var prev = _context, prevSelector = self.selector, result;
         prev && prev !== self && prev.data.push(self);
-        scope2 && (self.selector = selector(scope2));
+        scope && (self.selector = selector(scope));
         _context = self;
         result = func.apply(self, arguments);
         _isFunction(result) && self._r.push(result);
@@ -5809,17 +2834,17 @@
     return Context2;
   })();
   var MatchMedia = /* @__PURE__ */ (function() {
-    function MatchMedia2(scope2) {
+    function MatchMedia2(scope) {
       this.contexts = [];
-      this.scope = scope2;
+      this.scope = scope;
       _context && _context.data.push(this);
     }
     var _proto6 = MatchMedia2.prototype;
-    _proto6.add = function add(conditions, func, scope2) {
+    _proto6.add = function add(conditions, func, scope) {
       _isObject(conditions) || (conditions = {
         matches: conditions
       });
-      var context3 = new Context(0, scope2 || this.scope), cond = context3.conditions = {}, mq, p, active;
+      var context3 = new Context(0, scope || this.scope), cond = context3.conditions = {}, mq, p, active;
       _context && !context3.selector && (context3.selector = _context.selector);
       this.contexts.push(context3);
       func = context3.add("onMatch", func);
@@ -5910,7 +2935,7 @@
     isTweening: function isTweening(targets) {
       return _globalTimeline.getTweensOf(targets, true).length > 0;
     },
-    defaults: function defaults2(value) {
+    defaults: function defaults(value) {
       value && value.ease && (value.ease = _parseEase(value.ease, _defaults.ease));
       return _mergeDeep(_defaults, value || {});
     },
@@ -5918,12 +2943,12 @@
       return _mergeDeep(_config, value || {});
     },
     registerEffect: function registerEffect(_ref3) {
-      var name = _ref3.name, effect = _ref3.effect, plugins = _ref3.plugins, defaults3 = _ref3.defaults, extendTimeline = _ref3.extendTimeline;
+      var name = _ref3.name, effect = _ref3.effect, plugins = _ref3.plugins, defaults2 = _ref3.defaults, extendTimeline = _ref3.extendTimeline;
       (plugins || "").split(",").forEach(function(pluginName) {
         return pluginName && !_plugins[pluginName] && !_globals[pluginName] && _warn(name + " effect requires " + pluginName + " plugin.");
       });
       _effects[name] = function(targets, vars, tl) {
-        return effect(toArray(targets), _setDefaults(vars || {}, defaults3), tl);
+        return effect(toArray(targets), _setDefaults(vars || {}, defaults2), tl);
       };
       if (extendTimeline) {
         Timeline.prototype[name] = function(targets, vars, position) {
@@ -5934,7 +2959,7 @@
     registerEase: function registerEase(name, ease) {
       _easeMap[name] = _parseEase(ease);
     },
-    parseEase: function parseEase2(ease, defaultEase) {
+    parseEase: function parseEase(ease, defaultEase) {
       return arguments.length ? _parseEase(ease, defaultEase) : _easeMap;
     },
     getById: function getById(id) {
@@ -5960,11 +2985,11 @@
       _addToTimeline(_globalTimeline, tl, 0);
       return tl;
     },
-    context: function context(func, scope2) {
-      return func ? new Context(func, scope2) : _context;
+    context: function context(func, scope) {
+      return func ? new Context(func, scope) : _context;
     },
-    matchMedia: function matchMedia2(scope2) {
-      return new MatchMedia(scope2);
+    matchMedia: function matchMedia2(scope) {
+      return new MatchMedia(scope);
     },
     matchMediaRefresh: function matchMediaRefresh() {
       return _media.forEach(function(c) {
@@ -5990,11 +3015,11 @@
       wrap,
       wrapYoyo,
       distribute,
-      random: random2,
+      random,
       snap,
       normalize,
       getUnit,
-      clamp: clamp2,
+      clamp,
       splitColor,
       toArray,
       selector,
@@ -6002,7 +3027,7 @@
       pipe,
       unitize,
       interpolate,
-      shuffle: shuffle2
+      shuffle
     },
     install: _install,
     effects: _effects,
@@ -6103,7 +3128,7 @@
         this._props.push(p);
       }
     },
-    render: function render2(ratio, data) {
+    render: function render(ratio, data) {
       var pt = data._pt;
       while (pt) {
         _reverting ? pt.set(pt.t, pt.p, pt.b, pt) : pt.r(ratio, pt.d);
@@ -6411,7 +3436,7 @@
     isSVG = target.getCTM && _isSVG(target);
     if ((toPercent || curUnit === "%") && (_transformProps[property] || ~property.indexOf("adius"))) {
       px = isSVG ? target.getBBox()[horizontal ? "width" : "height"] : target[measureProperty];
-      return _round2(toPercent ? curValue / px * amount : curValue / 100 * px);
+      return _round(toPercent ? curValue / px * amount : curValue / 100 * px);
     }
     style[horizontal ? "width" : "height"] = amount + (toPixels ? curUnit : unit);
     parent = unit !== "rem" && ~property.indexOf("adius") || unit === "em" && target.appendChild && !isRootSVG ? target : target.parentNode;
@@ -6423,7 +3448,7 @@
     }
     cache = parent._gsap;
     if (cache && toPercent && cache.width && horizontal && cache.time === _ticker.time && !cache.uncache) {
-      return _round2(curValue / cache.width * amount);
+      return _round(curValue / cache.width * amount);
     } else {
       if (toPercent && (property === "height" || property === "width")) {
         var v = target.style[property];
@@ -6444,7 +3469,7 @@
         cache.width = parent[measureProperty];
       }
     }
-    return _round2(toPixels ? px * curValue / amount : px && curValue ? amount / px * curValue : 0);
+    return _round(toPixels ? px * curValue / amount : px && curValue ? amount / px * curValue : 0);
   };
   var _get = function _get2(target, property, unit, uncache) {
     var value;
@@ -6476,7 +3501,7 @@
         start = _getComputedProperty(target, "borderTopColor");
       }
     }
-    var pt = new PropTween(this._pt, target.style, prop, 0, 1, _renderComplexString), index = 0, matchIndex = 0, a, result, startValues, startNum, color2, startValue, endValue, endNum, chunk, endUnit, startUnit, endValues;
+    var pt = new PropTween(this._pt, target.style, prop, 0, 1, _renderComplexString), index = 0, matchIndex = 0, a, result, startValues, startNum, color, startValue, endValue, endNum, chunk, endUnit, startUnit, endValues;
     pt.b = start;
     pt.e = end;
     start += "";
@@ -6500,10 +3525,10 @@
       while (result = _numWithUnitExp.exec(end)) {
         endValue = result[0];
         chunk = end.substring(index, result.index);
-        if (color2) {
-          color2 = (color2 + 1) % 5;
+        if (color) {
+          color = (color + 1) % 5;
         } else if (chunk.substr(-5) === "rgba(" || chunk.substr(-5) === "hsla(") {
-          color2 = 1;
+          color = 1;
         }
         if (endValue !== (startValue = startValues[matchIndex++] || "")) {
           startNum = parseFloat(startValue) || 0;
@@ -6528,7 +3553,7 @@
             //note: SVG spec allows omission of comma/space when a negative sign is wedged between two numbers, like 2.5-5.3 instead of 2.5,-5.3 but when tweening, the negative value may switch to positive, so we insert the comma just in case.
             s: startNum,
             c: endNum - startNum,
-            m: color2 && color2 < 4 || prop === "zIndex" ? Math.round : 0
+            m: color && color < 4 || prop === "zIndex" ? Math.round : 0
           };
         }
       }
@@ -6548,15 +3573,15 @@
     center: "50%"
   };
   var _convertKeywordsToPercentages = function _convertKeywordsToPercentages2(value) {
-    var split3 = value.split(" "), x = split3[0], y = split3[1] || "50%";
+    var split2 = value.split(" "), x = split2[0], y = split2[1] || "50%";
     if (x === "top" || x === "bottom" || y === "left" || y === "right") {
       value = x;
       x = y;
       y = value;
     }
-    split3[0] = _keywordToPercent[x] || x;
-    split3[1] = _keywordToPercent[y] || y;
-    return split3.join(" ");
+    split2[0] = _keywordToPercent[x] || x;
+    split2[1] = _keywordToPercent[y] || y;
+    return split2.join(" ");
   };
   var _renderClearProps = function _renderClearProps2(ratio, data) {
     if (data.tween && data.tween._time === data.tween._dur) {
@@ -6670,7 +3695,7 @@
   };
   var _getComputedTransformMatrixAsArray = function _getComputedTransformMatrixAsArray2(target) {
     var matrixString = _getComputedProperty(target, _transformProp);
-    return _isNullTransform(matrixString) ? _identity2DMatrix : matrixString.substr(7).match(_numExp).map(_round2);
+    return _isNullTransform(matrixString) ? _identity2DMatrix : matrixString.substr(7).match(_numExp).map(_round);
   };
   var _getMatrix = function _getMatrix2(target, force2D) {
     var cache = target._gsap || _getCache(target), style = target.style, matrix = _getComputedTransformMatrixAsArray(target), parent, nextSibling, temp, addedToDOM;
@@ -6734,7 +3759,7 @@
     if ("x" in cache && !uncache && !cache.uncache) {
       return cache;
     }
-    var style = target.style, invertedScaleX = cache.scaleX < 0, px = "px", deg = "deg", cs = getComputedStyle(target), origin6 = _getComputedProperty(target, _transformOriginProp) || "0", x, y, z, scaleX, scaleY, rotation, rotationX, rotationY, skewX, skewY, perspective, xOrigin, yOrigin, matrix, angle, cos2, sin2, a, b, c, d, a12, a22, t1, t2, t3, a13, a23, a33, a42, a43, a32;
+    var style = target.style, invertedScaleX = cache.scaleX < 0, px = "px", deg = "deg", cs = getComputedStyle(target), origin6 = _getComputedProperty(target, _transformOriginProp) || "0", x, y, z, scaleX, scaleY, rotation, rotationX, rotationY, skewX, skewY, perspective, xOrigin, yOrigin, matrix, angle, cos, sin, a, b, c, d, a12, a22, t1, t2, t3, a13, a23, a33, a42, a43, a32;
     x = y = z = rotation = rotationX = rotationY = skewX = skewY = perspective = 0;
     scaleX = scaleY = 1;
     cache.svg = !!(target.getCTM && _isSVG(target));
@@ -6787,15 +3812,15 @@
         angle = _atan2(a32, a33);
         rotationX = angle * _RAD2DEG;
         if (angle) {
-          cos2 = Math.cos(-angle);
-          sin2 = Math.sin(-angle);
-          t1 = a12 * cos2 + a13 * sin2;
-          t2 = a22 * cos2 + a23 * sin2;
-          t3 = a32 * cos2 + a33 * sin2;
-          a13 = a12 * -sin2 + a13 * cos2;
-          a23 = a22 * -sin2 + a23 * cos2;
-          a33 = a32 * -sin2 + a33 * cos2;
-          a43 = a42 * -sin2 + a43 * cos2;
+          cos = Math.cos(-angle);
+          sin = Math.sin(-angle);
+          t1 = a12 * cos + a13 * sin;
+          t2 = a22 * cos + a23 * sin;
+          t3 = a32 * cos + a33 * sin;
+          a13 = a12 * -sin + a13 * cos;
+          a23 = a22 * -sin + a23 * cos;
+          a33 = a32 * -sin + a33 * cos;
+          a43 = a42 * -sin + a43 * cos;
           a12 = t1;
           a22 = t2;
           a32 = t3;
@@ -6803,12 +3828,12 @@
         angle = _atan2(-c, a33);
         rotationY = angle * _RAD2DEG;
         if (angle) {
-          cos2 = Math.cos(-angle);
-          sin2 = Math.sin(-angle);
-          t1 = a * cos2 - a13 * sin2;
-          t2 = b * cos2 - a23 * sin2;
-          t3 = c * cos2 - a33 * sin2;
-          a43 = d * sin2 + a43 * cos2;
+          cos = Math.cos(-angle);
+          sin = Math.sin(-angle);
+          t1 = a * cos - a13 * sin;
+          t2 = b * cos - a23 * sin;
+          t3 = c * cos - a33 * sin;
+          a43 = d * sin + a43 * cos;
           a = t1;
           b = t2;
           c = t3;
@@ -6816,12 +3841,12 @@
         angle = _atan2(b, a);
         rotation = angle * _RAD2DEG;
         if (angle) {
-          cos2 = Math.cos(angle);
-          sin2 = Math.sin(angle);
-          t1 = a * cos2 + b * sin2;
-          t2 = a12 * cos2 + a22 * sin2;
-          b = b * cos2 - a * sin2;
-          a22 = a22 * cos2 - a12 * sin2;
+          cos = Math.cos(angle);
+          sin = Math.sin(angle);
+          t1 = a * cos + b * sin;
+          t2 = a12 * cos + a22 * sin;
+          b = b * cos - a * sin;
+          a22 = a22 * cos - a12 * sin;
           a = t1;
           a12 = t2;
         }
@@ -6829,8 +3854,8 @@
           rotationX = rotation = 0;
           rotationY = 180 - rotationY;
         }
-        scaleX = _round2(Math.sqrt(a * a + b * b + c * c));
-        scaleY = _round2(Math.sqrt(a22 * a22 + a32 * a32));
+        scaleX = _round(Math.sqrt(a * a + b * b + c * c));
+        scaleY = _round(Math.sqrt(a22 * a22 + a32 * a32));
         angle = _atan2(a12, a22);
         skewX = Math.abs(angle) > 2e-4 ? angle * _RAD2DEG : 0;
         perspective = a43 ? 1 / (a43 < 0 ? -a43 : a43) : 0;
@@ -6855,11 +3880,11 @@
     cache.x = x - ((cache.xPercent = x && (!uncache && cache.xPercent || (Math.round(target.offsetWidth / 2) === Math.round(-x) ? -50 : 0))) ? target.offsetWidth * cache.xPercent / 100 : 0) + px;
     cache.y = y - ((cache.yPercent = y && (!uncache && cache.yPercent || (Math.round(target.offsetHeight / 2) === Math.round(-y) ? -50 : 0))) ? target.offsetHeight * cache.yPercent / 100 : 0) + px;
     cache.z = z + px;
-    cache.scaleX = _round2(scaleX);
-    cache.scaleY = _round2(scaleY);
-    cache.rotation = _round2(rotation) + deg;
-    cache.rotationX = _round2(rotationX) + deg;
-    cache.rotationY = _round2(rotationY) + deg;
+    cache.scaleX = _round(scaleX);
+    cache.scaleY = _round(scaleY);
+    cache.rotation = _round(rotation) + deg;
+    cache.rotationX = _round(rotationX) + deg;
+    cache.rotationY = _round(rotationY) + deg;
     cache.skewX = skewX + deg;
     cache.skewY = skewY + deg;
     cache.transformPerspective = perspective + px;
@@ -6877,7 +3902,7 @@
   };
   var _addPxTranslate = function _addPxTranslate2(target, start, value) {
     var unit = getUnit(start);
-    return _round2(parseFloat(start) + parseFloat(_convertToUnit(target, "x", value + "px", unit))) + unit;
+    return _round(parseFloat(start) + parseFloat(_convertToUnit(target, "x", value + "px", unit))) + unit;
   };
   var _renderNon3DTransforms = function _renderNon3DTransforms2(ratio, cache) {
     cache.z = "0px";
@@ -6891,12 +3916,12 @@
   var _renderCSSTransforms = function _renderCSSTransforms2(ratio, cache) {
     var _ref = cache || this, xPercent = _ref.xPercent, yPercent = _ref.yPercent, x = _ref.x, y = _ref.y, z = _ref.z, rotation = _ref.rotation, rotationY = _ref.rotationY, rotationX = _ref.rotationX, skewX = _ref.skewX, skewY = _ref.skewY, scaleX = _ref.scaleX, scaleY = _ref.scaleY, transformPerspective = _ref.transformPerspective, force3D = _ref.force3D, target = _ref.target, zOrigin = _ref.zOrigin, transforms = "", use3D = force3D === "auto" && ratio && ratio !== 1 || force3D === true;
     if (zOrigin && (rotationX !== _zeroDeg || rotationY !== _zeroDeg)) {
-      var angle = parseFloat(rotationY) * _DEG2RAD, a13 = Math.sin(angle), a33 = Math.cos(angle), cos2;
+      var angle = parseFloat(rotationY) * _DEG2RAD, a13 = Math.sin(angle), a33 = Math.cos(angle), cos;
       angle = parseFloat(rotationX) * _DEG2RAD;
-      cos2 = Math.cos(angle);
-      x = _addPxTranslate(target, x, a13 * cos2 * -zOrigin);
+      cos = Math.cos(angle);
+      x = _addPxTranslate(target, x, a13 * cos * -zOrigin);
       y = _addPxTranslate(target, y, -Math.sin(angle) * -zOrigin);
-      z = _addPxTranslate(target, z, a33 * cos2 * -zOrigin + zOrigin);
+      z = _addPxTranslate(target, z, a33 * cos * -zOrigin + zOrigin);
     }
     if (transformPerspective !== _zeroPx) {
       transforms += "perspective(" + transformPerspective + _endParenthesis;
@@ -6954,10 +3979,10 @@
           a21 *= temp;
         }
       }
-      a11 = _round2(a11);
-      a21 = _round2(a21);
-      a12 = _round2(a12);
-      a22 = _round2(a22);
+      a11 = _round(a11);
+      a21 = _round(a21);
+      a12 = _round(a12);
+      a22 = _round(a22);
     } else {
       a11 = scaleX;
       a22 = scaleY;
@@ -6968,13 +3993,13 @@
       ty = _convertToUnit(target, "y", y, "px");
     }
     if (xOrigin || yOrigin || xOffset || yOffset) {
-      tx = _round2(tx + xOrigin - (xOrigin * a11 + yOrigin * a12) + xOffset);
-      ty = _round2(ty + yOrigin - (xOrigin * a21 + yOrigin * a22) + yOffset);
+      tx = _round(tx + xOrigin - (xOrigin * a11 + yOrigin * a12) + xOffset);
+      ty = _round(ty + yOrigin - (xOrigin * a21 + yOrigin * a22) + yOffset);
     }
     if (xPercent || yPercent) {
       temp = target.getBBox();
-      tx = _round2(tx + xPercent / 100 * temp.width);
-      ty = _round2(ty + yPercent / 100 * temp.height);
+      tx = _round(tx + xPercent / 100 * temp.width);
+      ty = _round(ty + yPercent / 100 * temp.height);
     }
     temp = "matrix(" + a11 + "," + a21 + "," + a12 + "," + a22 + "," + tx + "," + ty + ")";
     target.setAttribute("transform", temp);
@@ -7215,7 +4240,7 @@
       }
       hasPriority && _sortPropTweensByPriority(this);
     },
-    render: function render3(ratio, data) {
+    render: function render2(ratio, data) {
       if (data.tween._time || !_reverting2()) {
         var pt = data._pt;
         while (pt) {
@@ -7250,8 +4275,8 @@
     });
     _propertyAliases[all[13]] = positionAndScale + "," + rotation;
     _forEachName(aliases, function(name) {
-      var split3 = name.split(":");
-      _propertyAliases[split3[1]] = all[split3[0]];
+      var split2 = name.split(":");
+      _propertyAliases[split2[1]] = all[split2[0]];
     });
   })("x,y,z,scale,scaleX,scaleY,xPercent,yPercent", "rotation,rotationX,rotationY,skewX,skewY", "transform,transformOrigin,svgOrigin,force3D,smoothOrigin,transformPerspective", "0:translateX,1:translateY,2:translateZ,8:rotate,8:rotationZ,8:rotateZ,9:rotateX,10:rotateY");
   _forEachName("x,y,z,top,right,bottom,left,width,height,fontSize,padding,margin,perspective", function(name) {
@@ -7262,1321 +4287,6 @@
   // node_modules/gsap/index.js
   var gsapWithCSS = gsap.registerPlugin(CSSPlugin) || gsap;
   var TweenMaxWithCSS = gsapWithCSS.core.Tween;
-
-  // node_modules/motion-utils/dist/es/clamp.mjs
-  var clamp4 = (min, max2, v) => {
-    if (v > max2)
-      return max2;
-    if (v < min)
-      return min;
-    return v;
-  };
-
-  // node_modules/motion-utils/dist/es/format-error-message.mjs
-  function formatErrorMessage(message, errorCode) {
-    return errorCode ? `${message}. For more information and steps for solving, visit https://motion.dev/troubleshooting/${errorCode}` : message;
-  }
-
-  // node_modules/motion-utils/dist/es/errors.mjs
-  var warning = () => {
-  };
-  var invariant = () => {
-  };
-  if (typeof process !== "undefined" && true) {
-    warning = (check, message, errorCode) => {
-      if (!check && typeof console !== "undefined") {
-        console.warn(formatErrorMessage(message, errorCode));
-      }
-    };
-    invariant = (check, message, errorCode) => {
-      if (!check) {
-        throw new Error(formatErrorMessage(message, errorCode));
-      }
-    };
-  }
-
-  // node_modules/motion-utils/dist/es/global-config.mjs
-  var MotionGlobalConfig = {};
-
-  // node_modules/motion-utils/dist/es/is-object.mjs
-  function isObject(value) {
-    return typeof value === "object" && value !== null;
-  }
-
-  // node_modules/motion-utils/dist/es/memo.mjs
-  // @__NO_SIDE_EFFECTS__
-  function memo(callback) {
-    let result;
-    return () => {
-      if (result === void 0)
-        result = callback();
-      return result;
-    };
-  }
-
-  // node_modules/motion-utils/dist/es/noop.mjs
-  var noop2 = /* @__NO_SIDE_EFFECTS__ */ (any) => any;
-
-  // node_modules/motion-utils/dist/es/pipe.mjs
-  var combineFunctions = (a, b) => (v) => b(a(v));
-  var pipe3 = (...transformers) => transformers.reduce(combineFunctions);
-
-  // node_modules/motion-utils/dist/es/progress.mjs
-  var progress = /* @__NO_SIDE_EFFECTS__ */ (from, to, value) => {
-    const toFromDifference = to - from;
-    return toFromDifference === 0 ? 1 : (value - from) / toFromDifference;
-  };
-
-  // node_modules/motion-utils/dist/es/velocity-per-second.mjs
-  function velocityPerSecond(velocity, frameDuration) {
-    return frameDuration ? velocity * (1e3 / frameDuration) : 0;
-  }
-
-  // node_modules/motion-utils/dist/es/warn-once.mjs
-  var warned = /* @__PURE__ */ new Set();
-  function warnOnce(condition, message, errorCode) {
-    if (condition || warned.has(message))
-      return;
-    console.warn(formatErrorMessage(message, errorCode));
-    warned.add(message);
-  }
-
-  // node_modules/motion-dom/dist/es/frameloop/order.mjs
-  var stepsOrder = [
-    "setup",
-    // Compute
-    "read",
-    // Read
-    "resolveKeyframes",
-    // Write/Read/Write/Read
-    "preUpdate",
-    // Compute
-    "update",
-    // Compute
-    "preRender",
-    // Compute
-    "render",
-    // Write
-    "postRender"
-    // Compute
-  ];
-
-  // node_modules/motion-dom/dist/es/stats/buffer.mjs
-  var statsBuffer = {
-    value: null,
-    addProjectionMetrics: null
-  };
-
-  // node_modules/motion-dom/dist/es/frameloop/render-step.mjs
-  function createRenderStep(runNextFrame, stepName) {
-    let thisFrame = /* @__PURE__ */ new Set();
-    let nextFrame = /* @__PURE__ */ new Set();
-    let isProcessing = false;
-    let flushNextFrame = false;
-    const toKeepAlive = /* @__PURE__ */ new WeakSet();
-    let latestFrameData = {
-      delta: 0,
-      timestamp: 0,
-      isProcessing: false
-    };
-    let numCalls = 0;
-    function triggerCallback(callback) {
-      if (toKeepAlive.has(callback)) {
-        step.schedule(callback);
-        runNextFrame();
-      }
-      numCalls++;
-      callback(latestFrameData);
-    }
-    const step = {
-      /**
-       * Schedule a process to run on the next frame.
-       */
-      schedule: (callback, keepAlive = false, immediate = false) => {
-        const addToCurrentFrame = immediate && isProcessing;
-        const queue = addToCurrentFrame ? thisFrame : nextFrame;
-        if (keepAlive)
-          toKeepAlive.add(callback);
-        if (!queue.has(callback))
-          queue.add(callback);
-        return callback;
-      },
-      /**
-       * Cancel the provided callback from running on the next frame.
-       */
-      cancel: (callback) => {
-        nextFrame.delete(callback);
-        toKeepAlive.delete(callback);
-      },
-      /**
-       * Execute all schedule callbacks.
-       */
-      process: (frameData2) => {
-        latestFrameData = frameData2;
-        if (isProcessing) {
-          flushNextFrame = true;
-          return;
-        }
-        isProcessing = true;
-        [thisFrame, nextFrame] = [nextFrame, thisFrame];
-        thisFrame.forEach(triggerCallback);
-        if (stepName && statsBuffer.value) {
-          statsBuffer.value.frameloop[stepName].push(numCalls);
-        }
-        numCalls = 0;
-        thisFrame.clear();
-        isProcessing = false;
-        if (flushNextFrame) {
-          flushNextFrame = false;
-          step.process(frameData2);
-        }
-      }
-    };
-    return step;
-  }
-
-  // node_modules/motion-dom/dist/es/frameloop/batcher.mjs
-  var maxElapsed = 40;
-  function createRenderBatcher(scheduleNextBatch, allowKeepAlive) {
-    let runNextFrame = false;
-    let useDefaultElapsed = true;
-    const state = {
-      delta: 0,
-      timestamp: 0,
-      isProcessing: false
-    };
-    const flagRunNextFrame = () => runNextFrame = true;
-    const steps = stepsOrder.reduce((acc, key2) => {
-      acc[key2] = createRenderStep(flagRunNextFrame, allowKeepAlive ? key2 : void 0);
-      return acc;
-    }, {});
-    const { setup, read, resolveKeyframes, preUpdate, update, preRender, render: render4, postRender } = steps;
-    const processBatch = () => {
-      const timestamp = MotionGlobalConfig.useManualTiming ? state.timestamp : performance.now();
-      runNextFrame = false;
-      if (!MotionGlobalConfig.useManualTiming) {
-        state.delta = useDefaultElapsed ? 1e3 / 60 : Math.max(Math.min(timestamp - state.timestamp, maxElapsed), 1);
-      }
-      state.timestamp = timestamp;
-      state.isProcessing = true;
-      setup.process(state);
-      read.process(state);
-      resolveKeyframes.process(state);
-      preUpdate.process(state);
-      update.process(state);
-      preRender.process(state);
-      render4.process(state);
-      postRender.process(state);
-      state.isProcessing = false;
-      if (runNextFrame && allowKeepAlive) {
-        useDefaultElapsed = false;
-        scheduleNextBatch(processBatch);
-      }
-    };
-    const wake = () => {
-      runNextFrame = true;
-      useDefaultElapsed = true;
-      if (!state.isProcessing) {
-        scheduleNextBatch(processBatch);
-      }
-    };
-    const schedule = stepsOrder.reduce((acc, key2) => {
-      const step = steps[key2];
-      acc[key2] = (process2, keepAlive = false, immediate = false) => {
-        if (!runNextFrame)
-          wake();
-        return step.schedule(process2, keepAlive, immediate);
-      };
-      return acc;
-    }, {});
-    const cancel = (process2) => {
-      for (let i = 0; i < stepsOrder.length; i++) {
-        steps[stepsOrder[i]].cancel(process2);
-      }
-    };
-    return { schedule, cancel, state, steps };
-  }
-
-  // node_modules/motion-dom/dist/es/frameloop/frame.mjs
-  var { schedule: frame, cancel: cancelFrame, state: frameData, steps: frameSteps } = /* @__PURE__ */ createRenderBatcher(typeof requestAnimationFrame !== "undefined" ? requestAnimationFrame : noop2, true);
-
-  // node_modules/motion-dom/dist/es/animation/utils/is-css-variable.mjs
-  var checkStringStartsWith = (token) => (key2) => typeof key2 === "string" && key2.startsWith(token);
-  var startsAsVariableToken = /* @__PURE__ */ checkStringStartsWith("var(--");
-  var isCSSVariableToken = (value) => {
-    const startsWithToken = startsAsVariableToken(value);
-    if (!startsWithToken)
-      return false;
-    return singleCssVariableRegex.test(value.split("/*")[0].trim());
-  };
-  var singleCssVariableRegex = /var\(--(?:[\w-]+\s*|[\w-]+\s*,(?:\s*[^)(\s]|\s*\((?:[^)(]|\([^)(]*\))*\))+\s*)\)$/iu;
-
-  // node_modules/motion-dom/dist/es/value/types/numbers/index.mjs
-  var number = {
-    test: (v) => typeof v === "number",
-    parse: parseFloat,
-    transform: (v) => v
-  };
-  var alpha = {
-    ...number,
-    transform: (v) => clamp4(0, 1, v)
-  };
-  var scale = {
-    ...number,
-    default: 1
-  };
-
-  // node_modules/motion-dom/dist/es/value/types/utils/sanitize.mjs
-  var sanitize = (v) => Math.round(v * 1e5) / 1e5;
-
-  // node_modules/motion-dom/dist/es/value/types/utils/float-regex.mjs
-  var floatRegex = /-?(?:\d+(?:\.\d+)?|\.\d+)/gu;
-
-  // node_modules/motion-dom/dist/es/value/types/utils/is-nullish.mjs
-  function isNullish(v) {
-    return v == null;
-  }
-
-  // node_modules/motion-dom/dist/es/value/types/utils/single-color-regex.mjs
-  var singleColorRegex = /^(?:#[\da-f]{3,8}|(?:rgb|hsl)a?\((?:-?[\d.]+%?[,\s]+){2}-?[\d.]+%?\s*(?:[,/]\s*)?(?:\b\d+(?:\.\d+)?|\.\d+)?%?\))$/iu;
-
-  // node_modules/motion-dom/dist/es/value/types/color/utils.mjs
-  var isColorString = (type, testProp) => (v) => {
-    return Boolean(typeof v === "string" && singleColorRegex.test(v) && v.startsWith(type) || testProp && !isNullish(v) && Object.prototype.hasOwnProperty.call(v, testProp));
-  };
-  var splitColor3 = (aName, bName, cName) => (v) => {
-    if (typeof v !== "string")
-      return v;
-    const [a, b, c, alpha2] = v.match(floatRegex);
-    return {
-      [aName]: parseFloat(a),
-      [bName]: parseFloat(b),
-      [cName]: parseFloat(c),
-      alpha: alpha2 !== void 0 ? parseFloat(alpha2) : 1
-    };
-  };
-
-  // node_modules/motion-dom/dist/es/value/types/color/rgba.mjs
-  var clampRgbUnit = (v) => clamp4(0, 255, v);
-  var rgbUnit = {
-    ...number,
-    transform: (v) => Math.round(clampRgbUnit(v))
-  };
-  var rgba = {
-    test: /* @__PURE__ */ isColorString("rgb", "red"),
-    parse: /* @__PURE__ */ splitColor3("red", "green", "blue"),
-    transform: ({ red, green, blue, alpha: alpha$1 = 1 }) => "rgba(" + rgbUnit.transform(red) + ", " + rgbUnit.transform(green) + ", " + rgbUnit.transform(blue) + ", " + sanitize(alpha.transform(alpha$1)) + ")"
-  };
-
-  // node_modules/motion-dom/dist/es/value/types/color/hex.mjs
-  function parseHex(v) {
-    let r = "";
-    let g = "";
-    let b = "";
-    let a = "";
-    if (v.length > 5) {
-      r = v.substring(1, 3);
-      g = v.substring(3, 5);
-      b = v.substring(5, 7);
-      a = v.substring(7, 9);
-    } else {
-      r = v.substring(1, 2);
-      g = v.substring(2, 3);
-      b = v.substring(3, 4);
-      a = v.substring(4, 5);
-      r += r;
-      g += g;
-      b += b;
-      a += a;
-    }
-    return {
-      red: parseInt(r, 16),
-      green: parseInt(g, 16),
-      blue: parseInt(b, 16),
-      alpha: a ? parseInt(a, 16) / 255 : 1
-    };
-  }
-  var hex = {
-    test: /* @__PURE__ */ isColorString("#"),
-    parse: parseHex,
-    transform: rgba.transform
-  };
-
-  // node_modules/motion-dom/dist/es/value/types/numbers/units.mjs
-  var createUnitType = /* @__NO_SIDE_EFFECTS__ */ (unit) => ({
-    test: (v) => typeof v === "string" && v.endsWith(unit) && v.split(" ").length === 1,
-    parse: parseFloat,
-    transform: (v) => `${v}${unit}`
-  });
-  var percent = /* @__PURE__ */ createUnitType("%");
-
-  // node_modules/motion-dom/dist/es/value/types/color/hsla.mjs
-  var hsla = {
-    test: /* @__PURE__ */ isColorString("hsl", "hue"),
-    parse: /* @__PURE__ */ splitColor3("hue", "saturation", "lightness"),
-    transform: ({ hue, saturation, lightness, alpha: alpha$1 = 1 }) => {
-      return "hsla(" + Math.round(hue) + ", " + percent.transform(sanitize(saturation)) + ", " + percent.transform(sanitize(lightness)) + ", " + sanitize(alpha.transform(alpha$1)) + ")";
-    }
-  };
-
-  // node_modules/motion-dom/dist/es/value/types/color/index.mjs
-  var color = {
-    test: (v) => rgba.test(v) || hex.test(v) || hsla.test(v),
-    parse: (v) => {
-      if (rgba.test(v)) {
-        return rgba.parse(v);
-      } else if (hsla.test(v)) {
-        return hsla.parse(v);
-      } else {
-        return hex.parse(v);
-      }
-    },
-    transform: (v) => {
-      return typeof v === "string" ? v : v.hasOwnProperty("red") ? rgba.transform(v) : hsla.transform(v);
-    },
-    getAnimatableNone: (v) => {
-      const parsed = color.parse(v);
-      parsed.alpha = 0;
-      return color.transform(parsed);
-    }
-  };
-
-  // node_modules/motion-dom/dist/es/value/types/utils/color-regex.mjs
-  var colorRegex = /(?:#[\da-f]{3,8}|(?:rgb|hsl)a?\((?:-?[\d.]+%?[,\s]+){2}-?[\d.]+%?\s*(?:[,/]\s*)?(?:\b\d+(?:\.\d+)?|\.\d+)?%?\))/giu;
-
-  // node_modules/motion-dom/dist/es/value/types/complex/index.mjs
-  function test(v) {
-    return isNaN(v) && typeof v === "string" && (v.match(floatRegex)?.length || 0) + (v.match(colorRegex)?.length || 0) > 0;
-  }
-  var NUMBER_TOKEN = "number";
-  var COLOR_TOKEN = "color";
-  var VAR_TOKEN = "var";
-  var VAR_FUNCTION_TOKEN = "var(";
-  var SPLIT_TOKEN = "${}";
-  var complexRegex = /var\s*\(\s*--(?:[\w-]+\s*|[\w-]+\s*,(?:\s*[^)(\s]|\s*\((?:[^)(]|\([^)(]*\))*\))+\s*)\)|#[\da-f]{3,8}|(?:rgb|hsl)a?\((?:-?[\d.]+%?[,\s]+){2}-?[\d.]+%?\s*(?:[,/]\s*)?(?:\b\d+(?:\.\d+)?|\.\d+)?%?\)|-?(?:\d+(?:\.\d+)?|\.\d+)/giu;
-  function analyseComplexValue(value) {
-    const originalValue = value.toString();
-    const values = [];
-    const indexes = {
-      color: [],
-      number: [],
-      var: []
-    };
-    const types = [];
-    let i = 0;
-    const tokenised = originalValue.replace(complexRegex, (parsedValue) => {
-      if (color.test(parsedValue)) {
-        indexes.color.push(i);
-        types.push(COLOR_TOKEN);
-        values.push(color.parse(parsedValue));
-      } else if (parsedValue.startsWith(VAR_FUNCTION_TOKEN)) {
-        indexes.var.push(i);
-        types.push(VAR_TOKEN);
-        values.push(parsedValue);
-      } else {
-        indexes.number.push(i);
-        types.push(NUMBER_TOKEN);
-        values.push(parseFloat(parsedValue));
-      }
-      ++i;
-      return SPLIT_TOKEN;
-    });
-    const split3 = tokenised.split(SPLIT_TOKEN);
-    return { values, split: split3, indexes, types };
-  }
-  function parseComplexValue(v) {
-    return analyseComplexValue(v).values;
-  }
-  function createTransformer(source) {
-    const { split: split3, types } = analyseComplexValue(source);
-    const numSections = split3.length;
-    return (v) => {
-      let output = "";
-      for (let i = 0; i < numSections; i++) {
-        output += split3[i];
-        if (v[i] !== void 0) {
-          const type = types[i];
-          if (type === NUMBER_TOKEN) {
-            output += sanitize(v[i]);
-          } else if (type === COLOR_TOKEN) {
-            output += color.transform(v[i]);
-          } else {
-            output += v[i];
-          }
-        }
-      }
-      return output;
-    };
-  }
-  var convertNumbersToZero = (v) => typeof v === "number" ? 0 : color.test(v) ? color.getAnimatableNone(v) : v;
-  function getAnimatableNone(v) {
-    const parsed = parseComplexValue(v);
-    const transformer = createTransformer(v);
-    return transformer(parsed.map(convertNumbersToZero));
-  }
-  var complex = {
-    test,
-    parse: parseComplexValue,
-    createTransformer,
-    getAnimatableNone
-  };
-
-  // node_modules/motion-dom/dist/es/value/types/color/hsla-to-rgba.mjs
-  function hueToRgb(p, q, t) {
-    if (t < 0)
-      t += 1;
-    if (t > 1)
-      t -= 1;
-    if (t < 1 / 6)
-      return p + (q - p) * 6 * t;
-    if (t < 1 / 2)
-      return q;
-    if (t < 2 / 3)
-      return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-  }
-  function hslaToRgba({ hue, saturation, lightness, alpha: alpha2 }) {
-    hue /= 360;
-    saturation /= 100;
-    lightness /= 100;
-    let red = 0;
-    let green = 0;
-    let blue = 0;
-    if (!saturation) {
-      red = green = blue = lightness;
-    } else {
-      const q = lightness < 0.5 ? lightness * (1 + saturation) : lightness + saturation - lightness * saturation;
-      const p = 2 * lightness - q;
-      red = hueToRgb(p, q, hue + 1 / 3);
-      green = hueToRgb(p, q, hue);
-      blue = hueToRgb(p, q, hue - 1 / 3);
-    }
-    return {
-      red: Math.round(red * 255),
-      green: Math.round(green * 255),
-      blue: Math.round(blue * 255),
-      alpha: alpha2
-    };
-  }
-
-  // node_modules/motion-dom/dist/es/utils/mix/immediate.mjs
-  function mixImmediate(a, b) {
-    return (p) => p > 0 ? b : a;
-  }
-
-  // node_modules/motion-dom/dist/es/utils/mix/number.mjs
-  var mixNumber = (from, to, progress2) => {
-    return from + (to - from) * progress2;
-  };
-
-  // node_modules/motion-dom/dist/es/utils/mix/color.mjs
-  var mixLinearColor = (from, to, v) => {
-    const fromExpo = from * from;
-    const expo = v * (to * to - fromExpo) + fromExpo;
-    return expo < 0 ? 0 : Math.sqrt(expo);
-  };
-  var colorTypes = [hex, rgba, hsla];
-  var getColorType = (v) => colorTypes.find((type) => type.test(v));
-  function asRGBA(color2) {
-    const type = getColorType(color2);
-    warning(Boolean(type), `'${color2}' is not an animatable color. Use the equivalent color code instead.`, "color-not-animatable");
-    if (!Boolean(type))
-      return false;
-    let model = type.parse(color2);
-    if (type === hsla) {
-      model = hslaToRgba(model);
-    }
-    return model;
-  }
-  var mixColor = (from, to) => {
-    const fromRGBA = asRGBA(from);
-    const toRGBA = asRGBA(to);
-    if (!fromRGBA || !toRGBA) {
-      return mixImmediate(from, to);
-    }
-    const blended = { ...fromRGBA };
-    return (v) => {
-      blended.red = mixLinearColor(fromRGBA.red, toRGBA.red, v);
-      blended.green = mixLinearColor(fromRGBA.green, toRGBA.green, v);
-      blended.blue = mixLinearColor(fromRGBA.blue, toRGBA.blue, v);
-      blended.alpha = mixNumber(fromRGBA.alpha, toRGBA.alpha, v);
-      return rgba.transform(blended);
-    };
-  };
-
-  // node_modules/motion-dom/dist/es/utils/mix/visibility.mjs
-  var invisibleValues = /* @__PURE__ */ new Set(["none", "hidden"]);
-  function mixVisibility(origin6, target) {
-    if (invisibleValues.has(origin6)) {
-      return (p) => p <= 0 ? origin6 : target;
-    } else {
-      return (p) => p >= 1 ? target : origin6;
-    }
-  }
-
-  // node_modules/motion-dom/dist/es/utils/mix/complex.mjs
-  function mixNumber2(a, b) {
-    return (p) => mixNumber(a, b, p);
-  }
-  function getMixer(a) {
-    if (typeof a === "number") {
-      return mixNumber2;
-    } else if (typeof a === "string") {
-      return isCSSVariableToken(a) ? mixImmediate : color.test(a) ? mixColor : mixComplex;
-    } else if (Array.isArray(a)) {
-      return mixArray;
-    } else if (typeof a === "object") {
-      return color.test(a) ? mixColor : mixObject;
-    }
-    return mixImmediate;
-  }
-  function mixArray(a, b) {
-    const output = [...a];
-    const numValues = output.length;
-    const blendValue = a.map((v, i) => getMixer(v)(v, b[i]));
-    return (p) => {
-      for (let i = 0; i < numValues; i++) {
-        output[i] = blendValue[i](p);
-      }
-      return output;
-    };
-  }
-  function mixObject(a, b) {
-    const output = { ...a, ...b };
-    const blendValue = {};
-    for (const key2 in output) {
-      if (a[key2] !== void 0 && b[key2] !== void 0) {
-        blendValue[key2] = getMixer(a[key2])(a[key2], b[key2]);
-      }
-    }
-    return (v) => {
-      for (const key2 in blendValue) {
-        output[key2] = blendValue[key2](v);
-      }
-      return output;
-    };
-  }
-  function matchOrder(origin6, target) {
-    const orderedOrigin = [];
-    const pointers = { color: 0, var: 0, number: 0 };
-    for (let i = 0; i < target.values.length; i++) {
-      const type = target.types[i];
-      const originIndex = origin6.indexes[type][pointers[type]];
-      const originValue = origin6.values[originIndex] ?? 0;
-      orderedOrigin[i] = originValue;
-      pointers[type]++;
-    }
-    return orderedOrigin;
-  }
-  var mixComplex = (origin6, target) => {
-    const template = complex.createTransformer(target);
-    const originStats = analyseComplexValue(origin6);
-    const targetStats = analyseComplexValue(target);
-    const canInterpolate = originStats.indexes.var.length === targetStats.indexes.var.length && originStats.indexes.color.length === targetStats.indexes.color.length && originStats.indexes.number.length >= targetStats.indexes.number.length;
-    if (canInterpolate) {
-      if (invisibleValues.has(origin6) && !targetStats.values.length || invisibleValues.has(target) && !originStats.values.length) {
-        return mixVisibility(origin6, target);
-      }
-      return pipe3(mixArray(matchOrder(originStats, targetStats), targetStats.values), template);
-    } else {
-      warning(true, `Complex values '${origin6}' and '${target}' too different to mix. Ensure all colors are of the same type, and that each contains the same quantity of number and color values. Falling back to instant transition.`, "complex-values-different");
-      return mixImmediate(origin6, target);
-    }
-  };
-
-  // node_modules/motion-dom/dist/es/utils/mix/index.mjs
-  function mix(from, to, p) {
-    if (typeof from === "number" && typeof to === "number" && typeof p === "number") {
-      return mixNumber(from, to, p);
-    }
-    const mixer = getMixer(from);
-    return mixer(from, to);
-  }
-
-  // node_modules/motion-dom/dist/es/utils/interpolate.mjs
-  function createMixers(output, ease, customMixer) {
-    const mixers = [];
-    const mixerFactory = customMixer || MotionGlobalConfig.mix || mix;
-    const numMixers = output.length - 1;
-    for (let i = 0; i < numMixers; i++) {
-      let mixer = mixerFactory(output[i], output[i + 1]);
-      if (ease) {
-        const easingFunction = Array.isArray(ease) ? ease[i] || noop2 : ease;
-        mixer = pipe3(easingFunction, mixer);
-      }
-      mixers.push(mixer);
-    }
-    return mixers;
-  }
-  function interpolate3(input, output, { clamp: isClamp = true, ease, mixer } = {}) {
-    const inputLength = input.length;
-    invariant(inputLength === output.length, "Both input and output ranges must be the same length", "range-length");
-    if (inputLength === 1)
-      return () => output[0];
-    if (inputLength === 2 && output[0] === output[1])
-      return () => output[1];
-    const isZeroDeltaRange = input[0] === input[1];
-    if (input[0] > input[inputLength - 1]) {
-      input = [...input].reverse();
-      output = [...output].reverse();
-    }
-    const mixers = createMixers(output, ease, mixer);
-    const numMixers = mixers.length;
-    const interpolator = (v) => {
-      if (isZeroDeltaRange && v < input[0])
-        return output[0];
-      let i = 0;
-      if (numMixers > 1) {
-        for (; i < input.length - 2; i++) {
-          if (v < input[i + 1])
-            break;
-        }
-      }
-      const progressInRange = progress(input[i], input[i + 1], v);
-      return mixers[i](progressInRange);
-    };
-    return isClamp ? (v) => interpolator(clamp4(input[0], input[inputLength - 1], v)) : interpolator;
-  }
-
-  // node_modules/motion-dom/dist/es/animation/keyframes/offsets/fill.mjs
-  function fillOffset(offset, remaining) {
-    const min = offset[offset.length - 1];
-    for (let i = 1; i <= remaining; i++) {
-      const offsetProgress = progress(0, remaining, i);
-      offset.push(mixNumber(min, 1, offsetProgress));
-    }
-  }
-
-  // node_modules/motion-dom/dist/es/animation/keyframes/offsets/default.mjs
-  function defaultOffset(arr) {
-    const offset = [0];
-    fillOffset(offset, arr.length - 1);
-    return offset;
-  }
-
-  // node_modules/motion-dom/dist/es/utils/supports/flags.mjs
-  var supportsFlags = {};
-
-  // node_modules/motion-dom/dist/es/utils/supports/memo.mjs
-  function memoSupports(callback, supportsFlag) {
-    const memoized = memo(callback);
-    return () => supportsFlags[supportsFlag] ?? memoized();
-  }
-
-  // node_modules/motion-dom/dist/es/utils/supports/scroll-timeline.mjs
-  var supportsScrollTimeline = /* @__PURE__ */ memoSupports(() => window.ScrollTimeline !== void 0, "scrollTimeline");
-  var supportsViewTimeline = /* @__PURE__ */ memoSupports(() => window.ViewTimeline !== void 0, "viewTimeline");
-
-  // node_modules/motion-dom/dist/es/utils/resolve-elements.mjs
-  function resolveElements(elementOrSelector, scope2, selectorCache) {
-    if (elementOrSelector == null) {
-      return [];
-    }
-    if (elementOrSelector instanceof EventTarget) {
-      return [elementOrSelector];
-    } else if (typeof elementOrSelector === "string") {
-      let root = document;
-      if (scope2) {
-        root = scope2.current;
-      }
-      const elements = selectorCache?.[elementOrSelector] ?? root.querySelectorAll(elementOrSelector);
-      return elements ? Array.from(elements) : [];
-    }
-    return Array.from(elementOrSelector).filter((element) => element != null);
-  }
-
-  // node_modules/motion-dom/dist/es/utils/is-html-element.mjs
-  function isHTMLElement(element) {
-    return isObject(element) && "offsetHeight" in element;
-  }
-
-  // node_modules/motion-dom/dist/es/utils/is-svg-element.mjs
-  function isSVGElement(element) {
-    return isObject(element) && "ownerSVGElement" in element;
-  }
-
-  // node_modules/motion-dom/dist/es/resize/handle-element.mjs
-  var resizeHandlers = /* @__PURE__ */ new WeakMap();
-  var observer;
-  var getSize = (borderBoxAxis, svgAxis, htmlAxis) => (target, borderBoxSize) => {
-    if (borderBoxSize && borderBoxSize[0]) {
-      return borderBoxSize[0][borderBoxAxis + "Size"];
-    } else if (isSVGElement(target) && "getBBox" in target) {
-      return target.getBBox()[svgAxis];
-    } else {
-      return target[htmlAxis];
-    }
-  };
-  var getWidth = /* @__PURE__ */ getSize("inline", "width", "offsetWidth");
-  var getHeight = /* @__PURE__ */ getSize("block", "height", "offsetHeight");
-  function notifyTarget({ target, borderBoxSize }) {
-    resizeHandlers.get(target)?.forEach((handler) => {
-      handler(target, {
-        get width() {
-          return getWidth(target, borderBoxSize);
-        },
-        get height() {
-          return getHeight(target, borderBoxSize);
-        }
-      });
-    });
-  }
-  function notifyAll(entries) {
-    entries.forEach(notifyTarget);
-  }
-  function createResizeObserver() {
-    if (typeof ResizeObserver === "undefined")
-      return;
-    observer = new ResizeObserver(notifyAll);
-  }
-  function resizeElement(target, handler) {
-    if (!observer)
-      createResizeObserver();
-    const elements = resolveElements(target);
-    elements.forEach((element) => {
-      let elementHandlers = resizeHandlers.get(element);
-      if (!elementHandlers) {
-        elementHandlers = /* @__PURE__ */ new Set();
-        resizeHandlers.set(element, elementHandlers);
-      }
-      elementHandlers.add(handler);
-      observer?.observe(element);
-    });
-    return () => {
-      elements.forEach((element) => {
-        const elementHandlers = resizeHandlers.get(element);
-        elementHandlers?.delete(handler);
-        if (!elementHandlers?.size) {
-          observer?.unobserve(element);
-        }
-      });
-    };
-  }
-
-  // node_modules/motion-dom/dist/es/resize/handle-window.mjs
-  var windowCallbacks = /* @__PURE__ */ new Set();
-  var windowResizeHandler;
-  function createWindowResizeHandler() {
-    windowResizeHandler = () => {
-      const info = {
-        get width() {
-          return window.innerWidth;
-        },
-        get height() {
-          return window.innerHeight;
-        }
-      };
-      windowCallbacks.forEach((callback) => callback(info));
-    };
-    window.addEventListener("resize", windowResizeHandler);
-  }
-  function resizeWindow(callback) {
-    windowCallbacks.add(callback);
-    if (!windowResizeHandler)
-      createWindowResizeHandler();
-    return () => {
-      windowCallbacks.delete(callback);
-      if (!windowCallbacks.size && typeof windowResizeHandler === "function") {
-        window.removeEventListener("resize", windowResizeHandler);
-        windowResizeHandler = void 0;
-      }
-    };
-  }
-
-  // node_modules/motion-dom/dist/es/resize/index.mjs
-  function resize(a, b) {
-    return typeof a === "function" ? resizeWindow(a) : resizeElement(a, b);
-  }
-
-  // node_modules/motion-dom/dist/es/scroll/observe.mjs
-  function observeTimeline(update, timeline2) {
-    let prevProgress;
-    const onFrame = () => {
-      const { currentTime } = timeline2;
-      const percentage = currentTime === null ? 0 : currentTime.value;
-      const progress2 = percentage / 100;
-      if (prevProgress !== progress2) {
-        update(progress2);
-      }
-      prevProgress = progress2;
-    };
-    frame.preUpdate(onFrame, true);
-    return () => cancelFrame(onFrame);
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/utils/can-use-native-timeline.mjs
-  function canUseNativeTimeline(target) {
-    if (typeof window === "undefined")
-      return false;
-    return target ? supportsViewTimeline() : supportsScrollTimeline();
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/info.mjs
-  var maxElapsed2 = 50;
-  var createAxisInfo = () => ({
-    current: 0,
-    offset: [],
-    progress: 0,
-    scrollLength: 0,
-    targetOffset: 0,
-    targetLength: 0,
-    containerLength: 0,
-    velocity: 0
-  });
-  var createScrollInfo = () => ({
-    time: 0,
-    x: createAxisInfo(),
-    y: createAxisInfo()
-  });
-  var keys = {
-    x: {
-      length: "Width",
-      position: "Left"
-    },
-    y: {
-      length: "Height",
-      position: "Top"
-    }
-  };
-  function updateAxisInfo(element, axisName, info, time) {
-    const axis = info[axisName];
-    const { length, position } = keys[axisName];
-    const prev = axis.current;
-    const prevTime = info.time;
-    axis.current = Math.abs(element[`scroll${position}`]);
-    axis.scrollLength = element[`scroll${length}`] - element[`client${length}`];
-    axis.offset.length = 0;
-    axis.offset[0] = 0;
-    axis.offset[1] = axis.scrollLength;
-    axis.progress = progress(0, axis.scrollLength, axis.current);
-    const elapsed = time - prevTime;
-    axis.velocity = elapsed > maxElapsed2 ? 0 : velocityPerSecond(axis.current - prev, elapsed);
-  }
-  function updateScrollInfo(element, info, time) {
-    updateAxisInfo(element, "x", info, time);
-    updateAxisInfo(element, "y", info, time);
-    info.time = time;
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/offsets/inset.mjs
-  function calcInset(element, container) {
-    const inset = { x: 0, y: 0 };
-    let current = element;
-    while (current && current !== container) {
-      if (isHTMLElement(current)) {
-        inset.x += current.offsetLeft;
-        inset.y += current.offsetTop;
-        current = current.offsetParent;
-      } else if (current.tagName === "svg") {
-        const svgBoundingBox = current.getBoundingClientRect();
-        current = current.parentElement;
-        const parentBoundingBox = current.getBoundingClientRect();
-        inset.x += svgBoundingBox.left - parentBoundingBox.left;
-        inset.y += svgBoundingBox.top - parentBoundingBox.top;
-      } else if (current instanceof SVGGraphicsElement) {
-        const { x, y } = current.getBBox();
-        inset.x += x;
-        inset.y += y;
-        let svg = null;
-        let parent = current.parentNode;
-        while (!svg) {
-          if (parent.tagName === "svg") {
-            svg = parent;
-          }
-          parent = current.parentNode;
-        }
-        current = svg;
-      } else {
-        break;
-      }
-    }
-    return inset;
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/offsets/edge.mjs
-  var namedEdges = {
-    start: 0,
-    center: 0.5,
-    end: 1
-  };
-  function resolveEdge(edge, length, inset = 0) {
-    let delta = 0;
-    if (edge in namedEdges) {
-      edge = namedEdges[edge];
-    }
-    if (typeof edge === "string") {
-      const asNumber = parseFloat(edge);
-      if (edge.endsWith("px")) {
-        delta = asNumber;
-      } else if (edge.endsWith("%")) {
-        edge = asNumber / 100;
-      } else if (edge.endsWith("vw")) {
-        delta = asNumber / 100 * document.documentElement.clientWidth;
-      } else if (edge.endsWith("vh")) {
-        delta = asNumber / 100 * document.documentElement.clientHeight;
-      } else {
-        edge = asNumber;
-      }
-    }
-    if (typeof edge === "number") {
-      delta = length * edge;
-    }
-    return inset + delta;
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/offsets/offset.mjs
-  var defaultOffset2 = [0, 0];
-  function resolveOffset(offset, containerLength, targetLength, targetInset) {
-    let offsetDefinition = Array.isArray(offset) ? offset : defaultOffset2;
-    let targetPoint = 0;
-    let containerPoint = 0;
-    if (typeof offset === "number") {
-      offsetDefinition = [offset, offset];
-    } else if (typeof offset === "string") {
-      offset = offset.trim();
-      if (offset.includes(" ")) {
-        offsetDefinition = offset.split(" ");
-      } else {
-        offsetDefinition = [offset, namedEdges[offset] ? offset : `0`];
-      }
-    }
-    targetPoint = resolveEdge(offsetDefinition[0], targetLength, targetInset);
-    containerPoint = resolveEdge(offsetDefinition[1], containerLength);
-    return targetPoint - containerPoint;
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/offsets/presets.mjs
-  var ScrollOffset = {
-    Enter: [
-      [0, 1],
-      [1, 1]
-    ],
-    Exit: [
-      [0, 0],
-      [1, 0]
-    ],
-    Any: [
-      [1, 0],
-      [0, 1]
-    ],
-    All: [
-      [0, 0],
-      [1, 1]
-    ]
-  };
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/offsets/index.mjs
-  var point = { x: 0, y: 0 };
-  function getTargetSize(target) {
-    return "getBBox" in target && target.tagName !== "svg" ? target.getBBox() : { width: target.clientWidth, height: target.clientHeight };
-  }
-  function resolveOffsets(container, info, options) {
-    const { offset: offsetDefinition = ScrollOffset.All } = options;
-    const { target = container, axis = "y" } = options;
-    const lengthLabel = axis === "y" ? "height" : "width";
-    const inset = target !== container ? calcInset(target, container) : point;
-    const targetSize = target === container ? { width: container.scrollWidth, height: container.scrollHeight } : getTargetSize(target);
-    const containerSize = {
-      width: container.clientWidth,
-      height: container.clientHeight
-    };
-    info[axis].offset.length = 0;
-    let hasChanged = !info[axis].interpolate;
-    const numOffsets = offsetDefinition.length;
-    for (let i = 0; i < numOffsets; i++) {
-      const offset = resolveOffset(offsetDefinition[i], containerSize[lengthLabel], targetSize[lengthLabel], inset[axis]);
-      if (!hasChanged && offset !== info[axis].interpolatorOffsets[i]) {
-        hasChanged = true;
-      }
-      info[axis].offset[i] = offset;
-    }
-    if (hasChanged) {
-      info[axis].interpolate = interpolate3(info[axis].offset, defaultOffset(offsetDefinition), { clamp: false });
-      info[axis].interpolatorOffsets = [...info[axis].offset];
-    }
-    info[axis].progress = clamp4(0, 1, info[axis].interpolate(info[axis].current));
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/on-scroll-handler.mjs
-  function measure(container, target = container, info) {
-    info.x.targetOffset = 0;
-    info.y.targetOffset = 0;
-    if (target !== container) {
-      let node = target;
-      while (node && node !== container) {
-        info.x.targetOffset += node.offsetLeft;
-        info.y.targetOffset += node.offsetTop;
-        node = node.offsetParent;
-      }
-    }
-    info.x.targetLength = target === container ? target.scrollWidth : target.clientWidth;
-    info.y.targetLength = target === container ? target.scrollHeight : target.clientHeight;
-    info.x.containerLength = container.clientWidth;
-    info.y.containerLength = container.clientHeight;
-    if (true) {
-      if (container && target && target !== container) {
-        warnOnce(getComputedStyle(container).position !== "static", "Please ensure that the container has a non-static position, like 'relative', 'fixed', or 'absolute' to ensure scroll offset is calculated correctly.");
-      }
-    }
-  }
-  function createOnScrollHandler(element, onScroll, info, options = {}) {
-    return {
-      measure: (time) => {
-        measure(element, options.target, info);
-        updateScrollInfo(element, info, time);
-        if (options.offset || options.target) {
-          resolveOffsets(element, info, options);
-        }
-      },
-      notify: () => onScroll(info)
-    };
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/track.mjs
-  var scrollListeners = /* @__PURE__ */ new WeakMap();
-  var resizeListeners = /* @__PURE__ */ new WeakMap();
-  var onScrollHandlers = /* @__PURE__ */ new WeakMap();
-  var scrollSize = /* @__PURE__ */ new WeakMap();
-  var dimensionCheckProcesses = /* @__PURE__ */ new WeakMap();
-  var getEventTarget = (element) => element === document.scrollingElement ? window : element;
-  function scrollInfo(onScroll, { container = document.scrollingElement, trackContentSize = false, ...options } = {}) {
-    if (!container)
-      return noop2;
-    let containerHandlers = onScrollHandlers.get(container);
-    if (!containerHandlers) {
-      containerHandlers = /* @__PURE__ */ new Set();
-      onScrollHandlers.set(container, containerHandlers);
-    }
-    const info = createScrollInfo();
-    const containerHandler = createOnScrollHandler(container, onScroll, info, options);
-    containerHandlers.add(containerHandler);
-    if (!scrollListeners.has(container)) {
-      const measureAll = () => {
-        for (const handler of containerHandlers) {
-          handler.measure(frameData.timestamp);
-        }
-        frame.preUpdate(notifyAll2);
-      };
-      const notifyAll2 = () => {
-        for (const handler of containerHandlers) {
-          handler.notify();
-        }
-      };
-      const listener2 = () => frame.read(measureAll);
-      scrollListeners.set(container, listener2);
-      const target = getEventTarget(container);
-      window.addEventListener("resize", listener2);
-      if (container !== document.documentElement) {
-        resizeListeners.set(container, resize(container, listener2));
-      }
-      target.addEventListener("scroll", listener2);
-      listener2();
-    }
-    if (trackContentSize && !dimensionCheckProcesses.has(container)) {
-      const listener2 = scrollListeners.get(container);
-      const size = {
-        width: container.scrollWidth,
-        height: container.scrollHeight
-      };
-      scrollSize.set(container, size);
-      const checkScrollDimensions = () => {
-        const newWidth = container.scrollWidth;
-        const newHeight = container.scrollHeight;
-        if (size.width !== newWidth || size.height !== newHeight) {
-          listener2();
-          size.width = newWidth;
-          size.height = newHeight;
-        }
-      };
-      const dimensionCheckProcess = frame.read(checkScrollDimensions, true);
-      dimensionCheckProcesses.set(container, dimensionCheckProcess);
-    }
-    const listener = scrollListeners.get(container);
-    frame.read(listener, false, true);
-    return () => {
-      cancelFrame(listener);
-      const currentHandlers = onScrollHandlers.get(container);
-      if (!currentHandlers)
-        return;
-      currentHandlers.delete(containerHandler);
-      if (currentHandlers.size)
-        return;
-      const scrollListener = scrollListeners.get(container);
-      scrollListeners.delete(container);
-      if (scrollListener) {
-        getEventTarget(container).removeEventListener("scroll", scrollListener);
-        resizeListeners.get(container)?.();
-        window.removeEventListener("resize", scrollListener);
-      }
-      const dimensionCheckProcess = dimensionCheckProcesses.get(container);
-      if (dimensionCheckProcess) {
-        cancelFrame(dimensionCheckProcess);
-        dimensionCheckProcesses.delete(container);
-      }
-      scrollSize.delete(container);
-    };
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/utils/offset-to-range.mjs
-  var presets = [
-    [ScrollOffset.Enter, "entry"],
-    [ScrollOffset.Exit, "exit"],
-    [ScrollOffset.Any, "cover"],
-    [ScrollOffset.All, "contain"]
-  ];
-  function matchesPreset(offset, preset) {
-    if (offset.length !== 2)
-      return false;
-    for (let i = 0; i < 2; i++) {
-      const o = offset[i];
-      const p = preset[i];
-      if (!Array.isArray(o) || o.length !== 2 || o[0] !== p[0] || o[1] !== p[1])
-        return false;
-    }
-    return true;
-  }
-  function offsetToViewTimelineRange(offset) {
-    if (!offset) {
-      return { rangeStart: "contain 0%", rangeEnd: "contain 100%" };
-    }
-    for (const [preset, name] of presets) {
-      if (matchesPreset(offset, preset)) {
-        return { rangeStart: `${name} 0%`, rangeEnd: `${name} 100%` };
-      }
-    }
-    return void 0;
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/utils/get-timeline.mjs
-  var timelineCache = /* @__PURE__ */ new Map();
-  function scrollTimelineFallback(options) {
-    const currentTime = { value: 0 };
-    const cancel = scrollInfo((info) => {
-      currentTime.value = info[options.axis].progress * 100;
-    }, options);
-    return { currentTime, cancel };
-  }
-  function getTimeline({ source, container, ...options }) {
-    const { axis } = options;
-    if (source)
-      container = source;
-    let containerCache = timelineCache.get(container);
-    if (!containerCache) {
-      containerCache = /* @__PURE__ */ new Map();
-      timelineCache.set(container, containerCache);
-    }
-    const targetKey = options.target ?? "self";
-    let targetCache = containerCache.get(targetKey);
-    if (!targetCache) {
-      targetCache = {};
-      containerCache.set(targetKey, targetCache);
-    }
-    const axisKey = axis + (options.offset ?? []).join(",");
-    if (!targetCache[axisKey]) {
-      if (options.target && canUseNativeTimeline(options.target)) {
-        const range = offsetToViewTimelineRange(options.offset);
-        if (range) {
-          targetCache[axisKey] = new ViewTimeline({
-            subject: options.target,
-            axis
-          });
-        } else {
-          targetCache[axisKey] = scrollTimelineFallback({
-            container,
-            ...options
-          });
-        }
-      } else if (canUseNativeTimeline()) {
-        targetCache[axisKey] = new ScrollTimeline({
-          source: container,
-          axis
-        });
-      } else {
-        targetCache[axisKey] = scrollTimelineFallback({
-          container,
-          ...options
-        });
-      }
-    }
-    return targetCache[axisKey];
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/attach-animation.mjs
-  function attachToAnimation(animation, options) {
-    const timeline2 = getTimeline(options);
-    const range = options.target ? offsetToViewTimelineRange(options.offset) : void 0;
-    const useNative = options.target ? canUseNativeTimeline(options.target) && !!range : canUseNativeTimeline();
-    return animation.attachTimeline({
-      timeline: useNative ? timeline2 : void 0,
-      ...range && useNative && {
-        rangeStart: range.rangeStart,
-        rangeEnd: range.rangeEnd
-      },
-      observe: (valueAnimation) => {
-        valueAnimation.pause();
-        return observeTimeline((progress2) => {
-          valueAnimation.time = valueAnimation.iterationDuration * progress2;
-        }, timeline2);
-      }
-    });
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/attach-function.mjs
-  function isOnScrollWithInfo(onScroll) {
-    return onScroll.length === 2;
-  }
-  function attachToFunction(onScroll, options) {
-    if (isOnScrollWithInfo(onScroll)) {
-      return scrollInfo((info) => {
-        onScroll(info[options.axis].progress, info);
-      }, options);
-    } else {
-      return observeTimeline(onScroll, getTimeline(options));
-    }
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/scroll/index.mjs
-  function scroll(onScroll, { axis = "y", container = document.scrollingElement, ...options } = {}) {
-    if (!container)
-      return noop2;
-    const optionsWithDefaults = { axis, container, ...options };
-    return typeof onScroll === "function" ? attachToFunction(onScroll, optionsWithDefaults) : attachToAnimation(onScroll, optionsWithDefaults);
-  }
-
-  // node_modules/framer-motion/dist/es/render/dom/viewport/index.mjs
-  var thresholds = {
-    some: 0,
-    all: 1
-  };
-  function inView(elementOrSelector, onStart, { root, margin: rootMargin, amount = "some" } = {}) {
-    const elements = resolveElements(elementOrSelector);
-    const activeIntersections = /* @__PURE__ */ new WeakMap();
-    const onIntersectionChange = (entries) => {
-      entries.forEach((entry) => {
-        const onEnd = activeIntersections.get(entry.target);
-        if (entry.isIntersecting === Boolean(onEnd))
-          return;
-        if (entry.isIntersecting) {
-          const newOnEnd = onStart(entry.target, entry);
-          if (typeof newOnEnd === "function") {
-            activeIntersections.set(entry.target, newOnEnd);
-          } else {
-            observer2.unobserve(entry.target);
-          }
-        } else if (typeof onEnd === "function") {
-          onEnd(entry);
-          activeIntersections.delete(entry.target);
-        }
-      });
-    };
-    const observer2 = new IntersectionObserver(onIntersectionChange, {
-      root,
-      rootMargin,
-      threshold: typeof amount === "number" ? amount : thresholds[amount]
-    });
-    elements.forEach((element) => observer2.observe(element));
-    return () => observer2.disconnect();
-  }
 
   // node_modules/@tsparticles/engine/browser/Core/Utils/Constants.js
   var generatedAttribute = "generated";
@@ -8609,7 +4319,7 @@
   var randomColorValue = "random";
   var midColorValue = "mid";
   var double = 2;
-  var doublePI2 = Math.PI * double;
+  var doublePI = Math.PI * double;
   var defaultFps = 60;
   var generatedTrue = "true";
   var generatedFalse = "false";
@@ -8649,7 +4359,7 @@
   var loadRandomFactor = 1e4;
   var loadMinIndex = 0;
   var one = 1;
-  var none2 = 0;
+  var none = 0;
   var decayOffset = 1;
   var tryCountIncrement = 1;
   var minRetries = 0;
@@ -8708,7 +4418,7 @@
   function isNumber(arg) {
     return typeof arg === "number";
   }
-  function isObject2(arg) {
+  function isObject(arg) {
     return typeof arg === "object" && arg !== null;
   }
   function isArray(arg) {
@@ -8797,7 +4507,7 @@
     }
     normalize() {
       const length = this.length;
-      if (length != none2) {
+      if (length != none) {
         this.multTo(inverseFactorNumerator / length);
       }
     }
@@ -8841,28 +4551,28 @@
     cancel: (idx) => cancelAnimationFrame(idx)
   };
   function getRandom() {
-    const min = 0, max2 = 1;
-    return clamp5(_random(), min, max2 - Number.EPSILON);
+    const min = 0, max = 1;
+    return clamp3(_random(), min, max - Number.EPSILON);
   }
-  function animate2(fn) {
+  function animate(fn) {
     return _animationLoop.nextFrame(fn);
   }
   function cancelAnimation(handle) {
     _animationLoop.cancel(handle);
   }
-  function clamp5(num, min, max2) {
-    return Math.min(Math.max(num, min), max2);
+  function clamp3(num, min, max) {
+    return Math.min(Math.max(num, min), max);
   }
-  function mix2(comp1, comp2, weight1, weight2) {
+  function mix(comp1, comp2, weight1, weight2) {
     return Math.floor((comp1 * weight1 + comp2 * weight2) / (weight1 + weight2));
   }
   function randomInRange(r) {
-    const max2 = getRangeMax(r), minOffset = 0;
+    const max = getRangeMax(r), minOffset = 0;
     let min = getRangeMin(r);
-    if (max2 === min) {
+    if (max === min) {
       min = minOffset;
     }
-    return getRandom() * (max2 - min) + min;
+    return getRandom() * (max - min) + min;
   }
   function getRangeValue(value) {
     return isNumber(value) ? value : randomInRange(value);
@@ -8877,11 +4587,11 @@
     if (source === value || value === void 0 && isNumber(source)) {
       return source;
     }
-    const min = getRangeMin(source), max2 = getRangeMax(source);
+    const min = getRangeMin(source), max = getRangeMax(source);
     return value !== void 0 ? {
       min: Math.min(min, value),
-      max: Math.max(max2, value)
-    } : setRangeValue(min, max2);
+      max: Math.max(max, value)
+    } : setRangeValue(min, max);
   }
   function getDistances(pointA, pointB) {
     const dx = pointA.x - pointB.x, dy = pointA.y - pointB.y, squareExp5 = 2;
@@ -8920,7 +4630,7 @@
       case MoveDirection.outside:
         return Math.atan2(position.y - center.y, position.x - center.x);
       default:
-        return getRandom() * doublePI2;
+        return getRandom() * doublePI;
     }
   }
   function getParticleBaseVelocity(direction) {
@@ -9022,12 +4732,12 @@
   function memoize(fn) {
     const cache = /* @__PURE__ */ new Map();
     return (...args) => {
-      const key2 = JSON.stringify(args);
-      if (cache.has(key2)) {
-        return cache.get(key2);
+      const key = JSON.stringify(args);
+      if (cache.has(key)) {
+        return cache.get(key);
       }
       const result = fn(...args);
-      cache.set(key2, result);
+      cache.set(key, result);
       return result;
     };
   }
@@ -9088,9 +4798,9 @@
   function itemFromArray(array, index, useIndex = true) {
     return array[index !== void 0 && useIndex ? index % array.length : arrayRandomIndex(array)];
   }
-  function isPointInside(point2, size, offset, radius, direction) {
+  function isPointInside(point, size, offset, radius, direction) {
     const minRadius6 = 0;
-    return areBoundsInside(calculateBounds(point2, radius ?? minRadius6), size, offset, direction);
+    return areBoundsInside(calculateBounds(point, radius ?? minRadius6), size, offset, direction);
   }
   function areBoundsInside(bounds, size, offset, direction) {
     let inside = true;
@@ -9108,12 +4818,12 @@
     }
     return inside;
   }
-  function calculateBounds(point2, radius) {
+  function calculateBounds(point, radius) {
     return {
-      bottom: point2.y + radius,
-      left: point2.x - radius,
-      right: point2.x + radius,
-      top: point2.y - radius
+      bottom: point.y + radius,
+      left: point.x - radius,
+      right: point.x + radius,
+      top: point.y - radius
     };
   }
   function deepExtend(destination, ...sources) {
@@ -9121,22 +4831,22 @@
       if (source === void 0 || source === null) {
         continue;
       }
-      if (!isObject2(source)) {
+      if (!isObject(source)) {
         destination = source;
         continue;
       }
       const sourceIsArray = Array.isArray(source);
-      if (sourceIsArray && (isObject2(destination) || !destination || !Array.isArray(destination))) {
+      if (sourceIsArray && (isObject(destination) || !destination || !Array.isArray(destination))) {
         destination = [];
-      } else if (!sourceIsArray && (isObject2(destination) || !destination || Array.isArray(destination))) {
+      } else if (!sourceIsArray && (isObject(destination) || !destination || Array.isArray(destination))) {
         destination = {};
       }
-      for (const key2 in source) {
-        if (key2 === "__proto__") {
+      for (const key in source) {
+        if (key === "__proto__") {
           continue;
         }
-        const sourceDict = source, value = sourceDict[key2], destDict = destination;
-        destDict[key2] = isObject2(value) && Array.isArray(value) ? value.map((v) => deepExtend(destDict[key2], v)) : deepExtend(destDict[key2], value);
+        const sourceDict = source, value = sourceDict[key], destDict = destination;
+        destDict[key] = isObject(value) && Array.isArray(value) ? value.map((v) => deepExtend(destDict[key], v)) : deepExtend(destDict[key], value);
       }
     }
     return destination;
@@ -9330,18 +5040,18 @@
   function getPosition(position, canvasSize) {
     return getPositionOrSize(position, canvasSize);
   }
-  function getSize2(size, canvasSize) {
+  function getSize(size, canvasSize) {
     return getPositionOrSize(size, canvasSize);
   }
-  function checkDestroy(particle, destroyType, value, minValue2, maxValue2) {
+  function checkDestroy(particle, destroyType, value, minValue, maxValue) {
     switch (destroyType) {
       case DestroyType.max:
-        if (value >= maxValue2) {
+        if (value >= maxValue) {
           particle.destroy();
         }
         break;
       case DestroyType.min:
-        if (value <= minValue2) {
+        if (value <= minValue) {
           particle.destroy();
         }
         break;
@@ -9352,7 +5062,7 @@
     if (particle.destroyed || !data || !data.enable || (data.maxLoops ?? minLoops2) > minLoops2 && (data.loops ?? minLoops2) > (data.maxLoops ?? minLoops2)) {
       return;
     }
-    const velocity = (data.velocity ?? minVelocity8) * delta.factor, minValue2 = data.min, maxValue2 = data.max, decay = data.decay ?? minDecay;
+    const velocity = (data.velocity ?? minVelocity8) * delta.factor, minValue = data.min, maxValue = data.max, decay = data.decay ?? minDecay;
     if (!data.time) {
       data.time = 0;
     }
@@ -9364,11 +5074,11 @@
     }
     switch (data.status) {
       case AnimationStatus.increasing:
-        if (data.value >= maxValue2) {
+        if (data.value >= maxValue) {
           if (changeDirection) {
             data.status = AnimationStatus.decreasing;
           } else {
-            data.value -= maxValue2;
+            data.value -= maxValue;
           }
           if (!data.loops) {
             data.loops = minLoops2;
@@ -9379,11 +5089,11 @@
         }
         break;
       case AnimationStatus.decreasing:
-        if (data.value <= minValue2) {
+        if (data.value <= minValue) {
           if (changeDirection) {
             data.status = AnimationStatus.increasing;
           } else {
-            data.value += maxValue2;
+            data.value += maxValue;
           }
           if (!data.loops) {
             data.loops = minLoops2;
@@ -9396,9 +5106,9 @@
     if (data.velocity && decay !== identity8) {
       data.velocity *= decay;
     }
-    checkDestroy(particle, destroyType, data.value, minValue2, maxValue2);
+    checkDestroy(particle, destroyType, data.value, minValue, maxValue);
     if (!particle.destroyed) {
-      data.value = clamp5(data.value, minValue2, maxValue2);
+      data.value = clamp3(data.value, minValue, maxValue);
     }
   }
   function cloneStyle(style) {
@@ -9406,9 +5116,9 @@
     if (!style) {
       return clonedStyle;
     }
-    for (const key2 in style) {
-      const styleKey = style[key2];
-      if (!Object.prototype.hasOwnProperty.call(style, key2) || isNull(styleKey)) {
+    for (const key in style) {
+      const styleKey = style[key];
+      if (!Object.prototype.hasOwnProperty.call(style, key) || isNull(styleKey)) {
         continue;
       }
       const styleValue = style.getPropertyValue?.(styleKey);
@@ -9437,9 +5147,9 @@
       top: "0",
       left: "0"
     };
-    for (const key2 in style) {
-      const value = style[key2];
-      fullScreenStyle.setProperty(key2, value);
+    for (const key in style) {
+      const value = style[key];
+      fullScreenStyle.setProperty(key, value);
     }
     return fullScreenStyle;
   }
@@ -9453,69 +5163,69 @@
   })(AlterType || (AlterType = {}));
 
   // node_modules/@tsparticles/engine/browser/Utils/ColorUtils.js
-  function stringToRgba(engine2, input) {
+  function stringToRgba(engine, input) {
     if (!input) {
       return;
     }
-    for (const manager of engine2.colorManagers.values()) {
+    for (const manager of engine.colorManagers.values()) {
       if (input.startsWith(manager.stringPrefix)) {
         return manager.parseString(input);
       }
     }
   }
-  function rangeColorToRgb(engine2, input, index, useIndex = true) {
+  function rangeColorToRgb(engine, input, index, useIndex = true) {
     if (!input) {
       return;
     }
-    const color2 = isString(input) ? { value: input } : input;
-    if (isString(color2.value)) {
-      return colorToRgb(engine2, color2.value, index, useIndex);
+    const color = isString(input) ? { value: input } : input;
+    if (isString(color.value)) {
+      return colorToRgb(engine, color.value, index, useIndex);
     }
-    if (isArray(color2.value)) {
-      return rangeColorToRgb(engine2, {
-        value: itemFromArray(color2.value, index, useIndex)
+    if (isArray(color.value)) {
+      return rangeColorToRgb(engine, {
+        value: itemFromArray(color.value, index, useIndex)
       });
     }
-    for (const manager of engine2.colorManagers.values()) {
-      const res = manager.handleRangeColor(color2);
+    for (const manager of engine.colorManagers.values()) {
+      const res = manager.handleRangeColor(color);
       if (res) {
         return res;
       }
     }
   }
-  function colorToRgb(engine2, input, index, useIndex = true) {
+  function colorToRgb(engine, input, index, useIndex = true) {
     if (!input) {
       return;
     }
-    const color2 = isString(input) ? { value: input } : input;
-    if (isString(color2.value)) {
-      return color2.value === randomColorValue ? getRandomRgbColor() : stringToRgb(engine2, color2.value);
+    const color = isString(input) ? { value: input } : input;
+    if (isString(color.value)) {
+      return color.value === randomColorValue ? getRandomRgbColor() : stringToRgb(engine, color.value);
     }
-    if (isArray(color2.value)) {
-      return colorToRgb(engine2, {
-        value: itemFromArray(color2.value, index, useIndex)
+    if (isArray(color.value)) {
+      return colorToRgb(engine, {
+        value: itemFromArray(color.value, index, useIndex)
       });
     }
-    for (const manager of engine2.colorManagers.values()) {
-      const res = manager.handleColor(color2);
+    for (const manager of engine.colorManagers.values()) {
+      const res = manager.handleColor(color);
       if (res) {
         return res;
       }
     }
   }
-  function rangeColorToHsl(engine2, color2, index, useIndex = true) {
-    const rgb = rangeColorToRgb(engine2, color2, index, useIndex);
+  function rangeColorToHsl(engine, color, index, useIndex = true) {
+    const rgb = rangeColorToRgb(engine, color, index, useIndex);
     return rgb ? rgbToHsl(rgb) : void 0;
   }
-  function rgbToHsl(color2) {
-    const r1 = color2.r / rgbMax, g1 = color2.g / rgbMax, b1 = color2.b / rgbMax, max2 = Math.max(r1, g1, b1), min = Math.min(r1, g1, b1), res = {
+  function rgbToHsl(color) {
+    const r1 = color.r / rgbMax, g1 = color.g / rgbMax, b1 = color.b / rgbMax, max = Math.max(r1, g1, b1), min = Math.min(r1, g1, b1), res = {
       h: hMin,
-      l: (max2 + min) * half,
+      l: (max + min) * half,
       s: sMin
     };
-    if (max2 !== min) {
-      res.s = res.l < half ? (max2 - min) / (max2 + min) : (max2 - min) / (double - max2 - min);
-      res.h = r1 === max2 ? (g1 - b1) / (max2 - min) : res.h = g1 === max2 ? double + (b1 - r1) / (max2 - min) : double * double + (r1 - g1) / (max2 - min);
+    if (max !== min) {
+      res.s = res.l < half ? (max - min) / (max + min) : (max - min) / (double - max - min);
+      res.h = r1 === max ? (g1 - b1) / (max - min) : res.h = g1 === max ? double + (b1 - r1) / (max - min) : double * double + (r1 - g1) / (max - min);
     }
     res.l *= lMax;
     res.s *= sMax;
@@ -9528,8 +5238,8 @@
     }
     return res;
   }
-  function stringToRgb(engine2, input) {
-    return stringToRgba(engine2, input);
+  function stringToRgb(engine, input) {
+    return stringToRgba(engine, input);
   }
   function hslToRgb(hsl) {
     const h = (hsl.h % hMax + hMax) % hMax, s = Math.max(sMin, Math.min(sMax, hsl.s)), l = Math.max(lMin, Math.min(lMax, hsl.l)), hNormalized = h / hMax, sNormalized = s / sMax, lNormalized = l / lMax;
@@ -9559,10 +5269,10 @@
     }, temp1 = lNormalized < half ? lNormalized * (sNormalizedOffset + sNormalized) : lNormalized + sNormalized - lNormalized * sNormalized, temp2 = double * lNormalized - temp1, phaseThird = phaseNumerator / triple, red = Math.min(rgbFactor, rgbFactor * channel(temp2, temp1, hNormalized + phaseThird)), green = Math.min(rgbFactor, rgbFactor * channel(temp2, temp1, hNormalized)), blue = Math.min(rgbFactor, rgbFactor * channel(temp2, temp1, hNormalized - phaseThird));
     return { r: Math.round(red), g: Math.round(green), b: Math.round(blue) };
   }
-  function hslaToRgba2(hsla2) {
-    const rgbResult = hslToRgb(hsla2);
+  function hslaToRgba(hsla) {
+    const rgbResult = hslToRgb(hsla);
     return {
-      a: hsla2.a,
+      a: hsla.a,
       b: rgbResult.b,
       g: rgbResult.g,
       r: rgbResult.r
@@ -9576,11 +5286,11 @@
       r: Math.floor(randomInRange(setRangeValue(fixedMin, fixedMax)))
     };
   }
-  function getStyleFromRgb(color2, opacity) {
-    return `rgba(${color2.r}, ${color2.g}, ${color2.b}, ${opacity ?? defaultOpacity})`;
+  function getStyleFromRgb(color, opacity) {
+    return `rgba(${color.r}, ${color.g}, ${color.b}, ${opacity ?? defaultOpacity})`;
   }
-  function getStyleFromHsl(color2, opacity) {
-    return `hsla(${color2.h}, ${color2.s}%, ${color2.l}%, ${opacity ?? defaultOpacity})`;
+  function getStyleFromHsl(color, opacity) {
+    return `hsla(${color.h}, ${color.s}%, ${color.l}%, ${opacity ?? defaultOpacity})`;
   }
   function colorMix(color1, color2, size1, size2) {
     let rgb1 = color1, rgb2 = color2;
@@ -9591,9 +5301,9 @@
       rgb2 = hslToRgb(color2);
     }
     return {
-      b: mix2(rgb1.b, rgb2.b, size1, size2),
-      g: mix2(rgb1.g, rgb2.g, size1, size2),
-      r: mix2(rgb1.r, rgb2.r, size1, size2)
+      b: mix(rgb1.b, rgb2.b, size1, size2),
+      g: mix(rgb1.g, rgb2.g, size1, size2),
+      r: mix(rgb1.r, rgb2.r, size1, size2)
     };
   }
   function getLinkColor(p1, p2, linkColor) {
@@ -9613,23 +5323,23 @@
       return linkColor;
     }
   }
-  function getLinkRandomColor(engine2, optColor, blink, consent) {
-    const color2 = isString(optColor) ? optColor : optColor.value;
-    if (color2 === randomColorValue) {
+  function getLinkRandomColor(engine, optColor, blink, consent) {
+    const color = isString(optColor) ? optColor : optColor.value;
+    if (color === randomColorValue) {
       if (consent) {
-        return rangeColorToRgb(engine2, {
-          value: color2
+        return rangeColorToRgb(engine, {
+          value: color
         });
       }
       if (blink) {
         return randomColorValue;
       }
       return midColorValue;
-    } else if (color2 === midColorValue) {
+    } else if (color === midColorValue) {
       return midColorValue;
     } else {
-      return rangeColorToRgb(engine2, {
-        value: color2
+      return rangeColorToRgb(engine, {
+        value: color
       });
     }
   }
@@ -9696,10 +5406,10 @@
     if ((data.delayTime ?? minDelay) > minDelay && data.time < (data.delayTime ?? minDelay)) {
       return;
     }
-    const offset = data.offset ? randomInRange(data.offset) : minOffset, velocity = (data.velocity ?? minVelocity8) * delta.factor + offset * velocityFactor, decay = data.decay ?? identity8, max2 = getRangeMax(range), min = getRangeMin(range);
+    const offset = data.offset ? randomInRange(data.offset) : minOffset, velocity = (data.velocity ?? minVelocity8) * delta.factor + offset * velocityFactor, decay = data.decay ?? identity8, max = getRangeMax(range), min = getRangeMin(range);
     if (!decrease || data.status === AnimationStatus.increasing) {
       data.value += velocity;
-      if (data.value > max2) {
+      if (data.value > max) {
         if (!data.loops) {
           data.loops = 0;
         }
@@ -9707,13 +5417,13 @@
         if (decrease) {
           data.status = AnimationStatus.decreasing;
         } else {
-          data.value -= max2;
+          data.value -= max;
         }
       }
     } else {
       data.value -= velocity;
-      const minValue2 = 0;
-      if (data.value < minValue2) {
+      const minValue = 0;
+      if (data.value < minValue) {
         if (!data.loops) {
           data.loops = 0;
         }
@@ -9724,13 +5434,13 @@
     if (data.velocity && decay !== identity8) {
       data.velocity *= decay;
     }
-    data.value = clamp5(data.value, min, max2);
+    data.value = clamp3(data.value, min, max);
   }
-  function updateColor(color2, delta) {
-    if (!color2) {
+  function updateColor(color, delta) {
+    if (!color) {
       return;
     }
-    const { h, s, l } = color2, ranges = {
+    const { h, s, l } = color, ranges = {
       h: { min: 0, max: 360 },
       s: { min: 0, max: 100 },
       l: { min: 0, max: 100 }
@@ -9892,19 +5602,19 @@
     }
     plugin.drawParticle(context3, particle, delta);
   }
-  function alterHsl(color2, type, value) {
+  function alterHsl(color, type, value) {
     return {
-      h: color2.h,
-      s: color2.s,
-      l: color2.l + (type === AlterType.darken ? -lFactor : lFactor) * value
+      h: color.h,
+      s: color.s,
+      l: color.l + (type === AlterType.darken ? -lFactor : lFactor) * value
     };
   }
 
   // node_modules/@tsparticles/engine/browser/Core/Canvas.js
-  function setTransformValue(factor, newFactor, key2) {
-    const newValue = newFactor[key2];
+  function setTransformValue(factor, newFactor, key) {
+    const newValue = newFactor[key];
     if (newValue !== void 0) {
-      factor[key2] = (factor[key2] ?? defaultTransformValue) * newValue;
+      factor[key] = (factor[key] ?? defaultTransformValue) * newValue;
     }
   }
   function setStyle(canvas, style, important = false) {
@@ -9919,30 +5629,30 @@
     if (!elementStyle) {
       return;
     }
-    const keys2 = /* @__PURE__ */ new Set();
-    for (const key2 in elementStyle) {
-      if (!Object.prototype.hasOwnProperty.call(elementStyle, key2)) {
+    const keys = /* @__PURE__ */ new Set();
+    for (const key in elementStyle) {
+      if (!Object.prototype.hasOwnProperty.call(elementStyle, key)) {
         continue;
       }
-      keys2.add(elementStyle[key2]);
+      keys.add(elementStyle[key]);
     }
-    for (const key2 in style) {
-      if (!Object.prototype.hasOwnProperty.call(style, key2)) {
+    for (const key in style) {
+      if (!Object.prototype.hasOwnProperty.call(style, key)) {
         continue;
       }
-      keys2.add(style[key2]);
+      keys.add(style[key]);
     }
-    for (const key2 of keys2) {
-      const value = style.getPropertyValue(key2);
+    for (const key of keys) {
+      const value = style.getPropertyValue(key);
       if (!value) {
-        elementStyle.removeProperty(key2);
+        elementStyle.removeProperty(key);
       } else {
-        elementStyle.setProperty(key2, value, important ? "important" : "");
+        elementStyle.setProperty(key, value, important ? "important" : "");
       }
     }
   }
   var Canvas = class {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       this.container = container;
       this._applyPostDrawUpdaters = (particle) => {
         for (const updater of this._postDrawUpdaters) {
@@ -9962,8 +5672,8 @@
           }
           if (updater.getTransformValues) {
             const updaterTransform = updater.getTransformValues(particle);
-            for (const key2 in updaterTransform) {
-              setTransformValue(transform, updaterTransform, key2);
+            for (const key in updaterTransform) {
+              setTransformValue(transform, updaterTransform, key);
             }
           }
           updater.beforeDraw?.(particle);
@@ -9990,9 +5700,9 @@
         return [fColor, sColor];
       };
       this._initCover = async () => {
-        const options = this.container.actualOptions, cover = options.backgroundMask.cover, color2 = cover.color;
-        if (color2) {
-          const coverRgb = rangeColorToRgb(this._engine, color2);
+        const options = this.container.actualOptions, cover = options.backgroundMask.cover, color = cover.color;
+        if (color) {
+          const coverRgb = rangeColorToRgb(this._engine, color);
           if (coverRgb) {
             const coverColor = {
               ...coverRgb,
@@ -10030,15 +5740,15 @@
         } else {
           this._resetOriginalStyle();
         }
-        for (const key2 in options.style) {
-          if (!key2 || !options.style || !Object.prototype.hasOwnProperty.call(options.style, key2)) {
+        for (const key in options.style) {
+          if (!key || !options.style || !Object.prototype.hasOwnProperty.call(options.style, key)) {
             continue;
           }
-          const value = options.style[key2];
+          const value = options.style[key];
           if (!value) {
             continue;
           }
-          element.style.setProperty(key2, value, "important");
+          element.style.setProperty(key, value, "important");
         }
       };
       this._initTrail = async () => {
@@ -10089,17 +5799,17 @@
         if (!element) {
           return;
         }
-        this._safeMutationObserver((observer2) => observer2.disconnect());
+        this._safeMutationObserver((observer) => observer.disconnect());
         this._initStyle();
         this.initBackground();
         const pointerEvents = this._pointerEvents;
         element.style.pointerEvents = pointerEvents;
         element.setAttribute("pointer-events", pointerEvents);
-        this._safeMutationObserver((observer2) => {
+        this._safeMutationObserver((observer) => {
           if (!element || !(element instanceof Node)) {
             return;
           }
-          observer2.observe(element, { attributes: true });
+          observer.observe(element, { attributes: true });
         });
       };
       this._resetOriginalStyle = () => {
@@ -10122,7 +5832,7 @@
         }
         setStyle(element, getFullScreenStyle(this.container.actualOptions.fullScreen.zIndex), true);
       };
-      this._engine = engine2;
+      this._engine = engine;
       this._standardSize = {
         height: 0,
         width: 0
@@ -10272,8 +5982,8 @@
         return;
       }
       if (background.color) {
-        const color2 = rangeColorToRgb(this._engine, background.color);
-        elementStyle.backgroundColor = color2 ? getStyleFromRgb(color2, background.opacity) : "";
+        const color = rangeColorToRgb(this._engine, background.color);
+        elementStyle.backgroundColor = color ? getStyleFromRgb(color, background.opacity) : "";
       } else {
         elementStyle.backgroundColor = "";
       }
@@ -10736,16 +6446,16 @@
       this.value = "";
     }
     static create(source, data) {
-      const color2 = new _OptionsColor();
-      color2.load(source);
+      const color = new _OptionsColor();
+      color.load(source);
       if (data !== void 0) {
         if (isString(data) || isArray(data)) {
-          color2.load({ value: data });
+          color.load({ value: data });
         } else {
-          color2.load(data);
+          color.load(data);
         }
       }
-      return color2;
+      return color;
     }
     load(data) {
       if (isNull(data)) {
@@ -10829,8 +6539,8 @@
         this.composite = data.composite;
       }
       if (data.cover !== void 0) {
-        const cover = data.cover, color2 = isString(data.cover) ? { color: data.cover } : data.cover;
-        this.cover.load(cover.color !== void 0 || cover.image !== void 0 ? cover : { color: color2 });
+        const cover = data.cover, color = isString(data.cover) ? { color: data.cover } : data.cover;
+        this.cover.load(cover.color !== void 0 || cover.image !== void 0 ? cover : { color });
       }
       if (data.enable !== void 0) {
         this.enable = data.enable;
@@ -11001,8 +6711,8 @@
 
   // node_modules/@tsparticles/engine/browser/Options/Classes/Interactivity/Modes/Modes.js
   var Modes = class {
-    constructor(engine2, container) {
-      this._engine = engine2;
+    constructor(engine, container) {
+      this._engine = engine;
       this._container = container;
     }
     load(data) {
@@ -11027,10 +6737,10 @@
 
   // node_modules/@tsparticles/engine/browser/Options/Classes/Interactivity/Interactivity.js
   var Interactivity = class {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       this.detectsOn = InteractivityDetect.window;
       this.events = new Events();
-      this.modes = new Modes(engine2, container);
+      this.modes = new Modes(engine, container);
     }
     load(data) {
       if (isNull(data)) {
@@ -11245,16 +6955,16 @@
       this.animation = new HslAnimation();
     }
     static create(source, data) {
-      const color2 = new _AnimatableColor();
-      color2.load(source);
+      const color = new _AnimatableColor();
+      color.load(source);
       if (data !== void 0) {
         if (isString(data) || isArray(data)) {
-          color2.load({ value: data });
+          color.load({ value: data });
         } else {
-          color2.load(data);
+          color.load(data);
         }
       }
-      return color2;
+      return color;
     }
     load(data) {
       super.load(data);
@@ -11711,7 +7421,7 @@
       this.gravity.load(data.gravity);
       const outModes = data.outModes;
       if (outModes !== void 0) {
-        if (isObject2(outModes)) {
+        if (isObject(outModes)) {
           this.outModes.load(outModes);
         } else {
           this.outModes.load({
@@ -12003,8 +7713,8 @@
 
   // node_modules/@tsparticles/engine/browser/Options/Classes/Particles/ParticlesOptions.js
   var ParticlesOptions = class {
-    constructor(engine2, container) {
-      this._engine = engine2;
+    constructor(engine, container) {
+      this._engine = engine;
       this._container = container;
       this.bounce = new ParticlesBounce();
       this.collisions = new Collisions();
@@ -12089,22 +7799,22 @@
       options.load(sourceOptions);
     }
   }
-  function loadParticlesOptions(engine2, container, ...sourceOptionsArr) {
-    const options = new ParticlesOptions(engine2, container);
+  function loadParticlesOptions(engine, container, ...sourceOptionsArr) {
+    const options = new ParticlesOptions(engine, container);
     loadOptions(options, ...sourceOptionsArr);
     return options;
   }
 
   // node_modules/@tsparticles/engine/browser/Options/Classes/Options.js
   var Options = class {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       this._findDefaultTheme = (mode) => {
         return this.themes.find((theme) => theme.default.value && theme.default.mode === mode) ?? this.themes.find((theme) => theme.default.value && theme.default.mode === ThemeMode.any);
       };
       this._importPreset = (preset) => {
         this.load(this._engine.getPreset(preset));
       };
-      this._engine = engine2;
+      this._engine = engine;
       this._container = container;
       this.autoPlay = true;
       this.background = new Background();
@@ -12116,7 +7826,7 @@
       this.detectRetina = true;
       this.duration = 0;
       this.fpsLimit = 120;
-      this.interactivity = new Interactivity(engine2, container);
+      this.interactivity = new Interactivity(engine, container);
       this.manualParticles = [];
       this.particles = loadParticlesOptions(this._engine, this._container);
       this.pauseOnBlur = true;
@@ -12252,9 +7962,9 @@
 
   // node_modules/@tsparticles/engine/browser/Core/Utils/InteractionManager.js
   var InteractionManager = class {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       this.container = container;
-      this._engine = engine2;
+      this._engine = engine;
       this._interactors = [];
       this._externalInteractors = [];
       this._particleInteractors = [];
@@ -12352,7 +8062,7 @@
     }
   }
   var Particle = class {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       this.container = container;
       this._calcPosition = (container2, position, zIndex, tryCount = defaultRetryCount) => {
         for (const plugin of container2.plugins.values()) {
@@ -12424,25 +8134,25 @@
         }
         return !!this.container.particles.find((particle) => getDistance(pos, particle.position) < radius + particle.getRadius());
       };
-      this._getRollColor = (color2) => {
-        if (!color2 || !this.roll || !this.backColor && !this.roll.alter) {
-          return color2;
+      this._getRollColor = (color) => {
+        if (!color || !this.roll || !this.backColor && !this.roll.alter) {
+          return color;
         }
-        const backFactor = this.roll.horizontal && this.roll.vertical ? double * rollFactor : rollFactor, backSum = this.roll.horizontal ? Math.PI * half : none2, rolled = Math.floor(((this.roll.angle ?? none2) + backSum) / (Math.PI / backFactor)) % double;
+        const backFactor = this.roll.horizontal && this.roll.vertical ? double * rollFactor : rollFactor, backSum = this.roll.horizontal ? Math.PI * half : none, rolled = Math.floor(((this.roll.angle ?? none) + backSum) / (Math.PI / backFactor)) % double;
         if (!rolled) {
-          return color2;
+          return color;
         }
         if (this.backColor) {
           return this.backColor;
         }
         if (this.roll.alter) {
-          return alterHsl(color2, this.roll.alter.type, this.roll.alter.value);
+          return alterHsl(color, this.roll.alter.type, this.roll.alter.value);
         }
-        return color2;
+        return color;
       };
       this._initPosition = (position) => {
         const container2 = this.container, zIndexValue = getRangeValue(this.options.zIndex.value);
-        this.position = this._calcPosition(container2, position, clamp5(zIndexValue, minZ, container2.zLayers));
+        this.position = this._calcPosition(container2, position, clamp3(zIndexValue, minZ, container2.zLayers));
         this.initialPosition = this.position.copy();
         const canvasSize = container2.canvas.size;
         this.moveCenter = {
@@ -12461,7 +8171,7 @@
         }
         this.offset = Vector.origin;
       };
-      this._engine = engine2;
+      this._engine = engine;
     }
     destroy(override) {
       if (this.unbreakable || this.destroyed) {
@@ -12513,7 +8223,7 @@
       return this._getRollColor(this.bubble.color ?? getHslFromAnimation(this.strokeColor));
     }
     init(id, position, overrideOptions, group) {
-      const container = this.container, engine2 = this._engine;
+      const container = this.container, engine = this._engine;
       this.id = id;
       this.group = group;
       this.effectClose = true;
@@ -12571,7 +8281,7 @@
       if (shapeData) {
         particlesOptions.load(shapeData.particles);
       }
-      const interactivity = new Interactivity(engine2, container);
+      const interactivity = new Interactivity(engine, container);
       interactivity.load(container.actualOptions.interactivity);
       interactivity.load(particlesOptions.interactivity);
       this.interactivity = interactivity;
@@ -12687,8 +8397,8 @@
       super(x, y, RangeType.circle);
       this.radius = radius;
     }
-    contains(point2) {
-      return getDistance(point2, this.position) <= this.radius;
+    contains(point) {
+      return getDistance(point, this.position) <= this.radius;
     }
     intersects(range) {
       const pos1 = this.position, pos2 = range.position, distPos = { x: Math.abs(pos2.x - pos1.x), y: Math.abs(pos2.y - pos1.y) }, r = this.radius;
@@ -12710,9 +8420,9 @@
         width
       };
     }
-    contains(point2) {
+    contains(point) {
       const w = this.size.width, h = this.size.height, pos = this.position;
-      return point2.x >= pos.x && point2.x <= pos.x + w && point2.y >= pos.y && point2.y <= pos.y + h;
+      return point.x >= pos.x && point.x <= pos.x + w && point.y >= pos.y && point.y <= pos.y + h;
     }
     intersects(range) {
       if (range instanceof Circle) {
@@ -12740,18 +8450,18 @@
       this._divided = false;
       this._subs = [];
     }
-    insert(point2) {
-      if (!this.rectangle.contains(point2.position)) {
+    insert(point) {
+      if (!this.rectangle.contains(point.position)) {
         return false;
       }
       if (this._points.length < this.capacity) {
-        this._points.push(point2);
+        this._points.push(point);
         return true;
       }
       if (!this._divided) {
         this._subdivide();
       }
-      return this._subs.some((sub) => sub.insert(point2));
+      return this._subs.some((sub) => sub.insert(point));
     }
     query(range, check) {
       const res = [];
@@ -12785,7 +8495,7 @@
     return new Rectangle(posOffset * width, posOffset * height, sizeFactor * width, sizeFactor * height);
   };
   var Particles = class {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       this._addToPool = (...particles) => {
         this._pool.push(...particles);
       };
@@ -12865,7 +8575,7 @@
         this._addToPool(particle);
         return true;
       };
-      this._engine = engine2;
+      this._engine = engine;
       this._container = container;
       this._nextId = 0;
       this._array = [];
@@ -12875,7 +8585,7 @@
       this._groupLimits = /* @__PURE__ */ new Map();
       this._needsSort = false;
       this._lastZIndex = 0;
-      this._interactionManager = new InteractionManager(engine2, container);
+      this._interactionManager = new InteractionManager(engine, container);
       this._pluginsInitialized = false;
       const canvasSize = container.canvas.size;
       this.quadTree = new QuadTree(qTreeRectangle(canvasSize), qTreeCapacity);
@@ -13135,13 +8845,13 @@
       factor: smooth ? defaultFps / fpsLimit : defaultFps * value / millisecondsToSeconds
     };
   }
-  function loadContainerOptions(engine2, container, ...sourceOptionsArr) {
-    const options = new Options(engine2, container);
+  function loadContainerOptions(engine, container, ...sourceOptionsArr) {
+    const options = new Options(engine, container);
     loadOptions(options, ...sourceOptionsArr);
     return options;
   }
   var Container = class {
-    constructor(engine2, id, sourceOptions) {
+    constructor(engine, id, sourceOptions) {
       this._intersectionManager = (entries) => {
         if (!guardCheck(this) || !this.actualOptions.pauseOnOutsideViewport) {
           return;
@@ -13183,7 +8893,7 @@
           getLogger().error(`${errorPrefix} in animation loop`, e);
         }
       };
-      this._engine = engine2;
+      this._engine = engine;
       this.id = Symbol(id);
       this.fpsLimit = 120;
       this._smooth = false;
@@ -13299,18 +9009,18 @@
       this._clickHandlers.set("touchmove", touchMoveHandler);
       this._clickHandlers.set("touchend", touchEndHandler);
       this._clickHandlers.set("touchcancel", touchCancelHandler);
-      for (const [key2, handler] of this._clickHandlers) {
-        el.addEventListener(key2, handler);
+      for (const [key, handler] of this._clickHandlers) {
+        el.addEventListener(key, handler);
       }
     }
     addLifeTime(value) {
       this._lifeTime += value;
     }
-    addPath(key2, generator, override = false) {
-      if (!guardCheck(this) || !override && this.pathGenerators.has(key2)) {
+    addPath(key, generator, override = false) {
+      if (!guardCheck(this) || !override && this.pathGenerators.has(key)) {
         return false;
       }
-      this.pathGenerators.set(key2, generator);
+      this.pathGenerators.set(key, generator);
       return true;
     }
     alive() {
@@ -13320,8 +9030,8 @@
       if (!guardCheck(this)) {
         return;
       }
-      for (const [key2, handler] of this._clickHandlers) {
-        this.interactivity.element?.removeEventListener(key2, handler);
+      for (const [key, handler] of this._clickHandlers) {
+        this.interactivity.element?.removeEventListener(key, handler);
       }
       this._clickHandlers.clear();
     }
@@ -13339,11 +9049,11 @@
       for (const shapeDrawer of this.shapeDrawers.values()) {
         shapeDrawer.destroy?.(this);
       }
-      for (const key2 of this.effectDrawers.keys()) {
-        this.effectDrawers.delete(key2);
+      for (const key of this.effectDrawers.keys()) {
+        this.effectDrawers.delete(key);
       }
-      for (const key2 of this.shapeDrawers.keys()) {
-        this.shapeDrawers.delete(key2);
+      for (const key of this.shapeDrawers.keys()) {
+        this.shapeDrawers.delete(key);
       }
       this._engine.clearPlugins(this);
       this.destroyed = true;
@@ -13360,14 +9070,14 @@
         return;
       }
       let refreshTime = force;
-      const frame2 = (timestamp) => {
+      const frame = (timestamp) => {
         if (refreshTime) {
           this._lastFrameTime = void 0;
           refreshTime = false;
         }
         this._nextFrame(timestamp);
       };
-      this._drawAnimationFrame = animate2((timestamp) => frame2(timestamp));
+      this._drawAnimationFrame = animate((timestamp) => frame(timestamp));
     }
     async export(type, options = {}) {
       for (const plugin of this.plugins.values()) {
@@ -13552,8 +9262,8 @@
       for (const plugin of this.plugins.values()) {
         plugin.stop?.();
       }
-      for (const key2 of this.plugins.keys()) {
-        this.plugins.delete(key2);
+      for (const key of this.plugins.keys()) {
+        this.plugins.delete(key);
       }
       this._sourceOptions = this._options;
       this._engine.dispatchEvent(EventType.containerStopped, { container: this });
@@ -13674,7 +9384,7 @@
     document.body.append(domContainer);
     return domContainer;
   };
-  var Engine2 = class {
+  var Engine = class {
     constructor() {
       this._configs = /* @__PURE__ */ new Map();
       this._domArray = [];
@@ -13714,9 +9424,9 @@
       await this.refresh(refresh);
     }
     addConfig(config3) {
-      const key2 = config3.key ?? config3.name ?? "default";
-      this._configs.set(key2, config3);
-      this._eventDispatcher.dispatchEvent(EventType.configAdded, { data: { name: key2, config: config3 } });
+      const key = config3.key ?? config3.name ?? "default";
+      this._configs.set(key, config3);
+      this._eventDispatcher.dispatchEvent(EventType.configAdded, { data: { name: key, config: config3 } });
     }
     async addEasing(name, easing, refresh = true) {
       if (this.getEasing(name)) {
@@ -13854,7 +9564,7 @@
     async load(params) {
       const id = params.id ?? params.element?.id ?? `tsparticles${Math.floor(getRandom() * loadRandomFactor)}`, { index, url } = params, options = url ? await getDataFromUrl({ fallback: params.options, url, index }) : params.options, currentOptions = itemFromSingleOrMultiple(options, index), { items } = this, oldIndex = items.findIndex((v) => v.id.description === id), newItem = new Container(this, id, currentOptions);
       if (oldIndex >= loadMinIndex) {
-        const old = this.item(oldIndex), deleteCount2 = old ? one : none2;
+        const old = this.item(oldIndex), deleteCount2 = old ? one : none;
         if (old && !old.destroyed) {
           old.destroy(false);
         }
@@ -13897,9 +9607,9 @@
 
   // node_modules/@tsparticles/engine/browser/init.js
   function init4() {
-    const engine2 = new Engine2();
-    engine2.init();
-    return engine2;
+    const engine = new Engine();
+    engine.init();
+    return engine;
   }
 
   // node_modules/@tsparticles/engine/browser/Core/Utils/ExternalInteractorBase.js
@@ -14078,7 +9788,7 @@
   var maxAngle = Math.PI * double2;
   var minVelocity2 = 0;
   var AbsorberInstance = class {
-    constructor(absorbers, container, engine2, options, position) {
+    constructor(absorbers, container, engine, options, position) {
       this._calcPosition = () => {
         const exactPosition = calcPositionOrRandomFromSizeRanged({
           size: this._container.canvas.size,
@@ -14130,7 +9840,7 @@
       };
       this._absorbers = absorbers;
       this._container = container;
-      this._engine = engine2;
+      this._engine = engine;
       this.initialPosition = position ? Vector.create(position.x, position.y) : void 0;
       if (options instanceof Absorber) {
         this.options = options;
@@ -14216,9 +9926,9 @@
   // node_modules/@tsparticles/plugin-absorbers/browser/Absorbers.js
   var defaultIndex = 0;
   var Absorbers = class {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       this._container = container;
-      this._engine = engine2;
+      this._engine = engine;
       this.array = [];
       this.absorbers = [];
       this.interactivityAbsorbers = [];
@@ -14280,9 +9990,9 @@
 
   // node_modules/@tsparticles/plugin-absorbers/browser/AbsorbersPlugin.js
   var AbsorbersPlugin = class {
-    constructor(engine2) {
+    constructor(engine) {
       this.id = "absorbers";
-      this._engine = engine2;
+      this._engine = engine;
     }
     async getPlugin(container) {
       return Promise.resolve(new Absorbers(container, this._engine));
@@ -14321,9 +10031,9 @@
   };
 
   // node_modules/@tsparticles/plugin-absorbers/browser/index.js
-  async function loadAbsorbersPlugin(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addPlugin(new AbsorbersPlugin(engine2), refresh);
+  async function loadAbsorbersPlugin(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addPlugin(new AbsorbersPlugin(engine), refresh);
   }
 
   // node_modules/@tsparticles/updater-destroy/browser/Options/Classes/DestroyBounds.js
@@ -14433,27 +10143,27 @@
   };
 
   // node_modules/@tsparticles/updater-destroy/browser/Utils.js
-  var defaultOffset3 = 0;
+  var defaultOffset = 0;
   var minDestroySize = 0.5;
   var defaultSplitCount = 0;
   var increment = 1;
   var unbreakableTime = 500;
   var minSplitCount = 0;
-  function addSplitParticle(engine2, container, parent, splitParticlesOptions) {
+  function addSplitParticle(engine, container, parent, splitParticlesOptions) {
     const destroyOptions = parent.options.destroy;
     if (!destroyOptions) {
       return;
     }
-    const splitOptions = destroyOptions.split, options = loadParticlesOptions(engine2, container, parent.options), factor = getRangeValue(splitOptions.factor.value), parentColor = parent.getFillColor();
+    const splitOptions = destroyOptions.split, options = loadParticlesOptions(engine, container, parent.options), factor = getRangeValue(splitOptions.factor.value), parentColor = parent.getFillColor();
     if (splitOptions.color) {
       options.color.load(splitOptions.color);
     } else if (splitOptions.colorOffset && parentColor) {
       options.color.load({
         value: {
           hsl: {
-            h: parentColor.h + getRangeValue(splitOptions.colorOffset.h ?? defaultOffset3),
-            s: parentColor.s + getRangeValue(splitOptions.colorOffset.s ?? defaultOffset3),
-            l: parentColor.l + getRangeValue(splitOptions.colorOffset.l ?? defaultOffset3)
+            h: parentColor.h + getRangeValue(splitOptions.colorOffset.h ?? defaultOffset),
+            s: parentColor.s + getRangeValue(splitOptions.colorOffset.s ?? defaultOffset),
+            l: parentColor.l + getRangeValue(splitOptions.colorOffset.l ?? defaultOffset)
           }
         }
       });
@@ -14478,7 +10188,7 @@
       options.size.value.max /= factor;
     }
     options.load(splitParticlesOptions);
-    const offset = splitOptions.sizeOffset ? setRangeValue(-parent.size.value, parent.size.value) : defaultOffset3, position = {
+    const offset = splitOptions.sizeOffset ? setRangeValue(-parent.size.value, parent.size.value) : defaultOffset, position = {
       x: parent.position.x + randomInRange(offset),
       y: parent.position.y + randomInRange(offset)
     };
@@ -14495,7 +10205,7 @@
       return true;
     });
   }
-  function split2(engine2, container, particle) {
+  function split(engine, container, particle) {
     const destroyOptions = particle.options.destroy;
     if (!destroyOptions) {
       return;
@@ -14506,15 +10216,15 @@
     }
     const rate = getRangeValue(splitOptions.rate.value), particlesSplitOptions = itemFromSingleOrMultiple(splitOptions.particles);
     for (let i = 0; i < rate; i++) {
-      addSplitParticle(engine2, container, particle, particlesSplitOptions);
+      addSplitParticle(engine, container, particle, particlesSplitOptions);
     }
   }
 
   // node_modules/@tsparticles/updater-destroy/browser/DestroyUpdater.js
   var DestroyUpdater = class {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       this.container = container;
-      this.engine = engine2;
+      this.engine = engine;
     }
     init(particle) {
       const container = this.container, particlesOptions = particle.options, destroyOptions = particlesOptions.destroy;
@@ -14557,7 +10267,7 @@
       }
       const destroyOptions = particle.options.destroy;
       if (destroyOptions && destroyOptions.mode === DestroyMode.split) {
-        split2(this.engine, this.container, particle);
+        split(this.engine, this.container, particle);
       }
     }
     update(particle) {
@@ -14575,10 +10285,10 @@
   };
 
   // node_modules/@tsparticles/updater-destroy/browser/index.js
-  async function loadDestroyUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("destroy", (container) => {
-      return Promise.resolve(new DestroyUpdater(engine2, container));
+  async function loadDestroyUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("destroy", (container) => {
+      return Promise.resolve(new DestroyUpdater(engine, container));
     }, refresh);
   }
 
@@ -14760,17 +10470,17 @@
   var defaultEmitDelay = 0;
   var defaultLifeCount = -1;
   var defaultColorAnimationFactor = 1;
-  function setParticlesOptionsColor(particlesOptions, color2) {
+  function setParticlesOptionsColor(particlesOptions, color) {
     if (particlesOptions.color) {
-      particlesOptions.color.value = color2;
+      particlesOptions.color.value = color;
     } else {
       particlesOptions.color = {
-        value: color2
+        value: color
       };
     }
   }
   var EmitterInstance = class {
-    constructor(engine2, emitters, container, options, position) {
+    constructor(engine, emitters, container, options, position) {
       var _a;
       this.emitters = emitters;
       this.container = container;
@@ -14796,15 +10506,15 @@
           this._duration = duration * millisecondsToSeconds;
         }
       };
-      this._setColorAnimation = (animation, initValue, maxValue2, factor = defaultColorAnimationFactor) => {
+      this._setColorAnimation = (animation, initValue, maxValue, factor = defaultColorAnimationFactor) => {
         const container2 = this.container;
         if (!animation.enable) {
           return initValue;
         }
         const colorOffset = randomInRange(animation.offset), delay = getRangeValue(this.options.rate.delay), emitFactor = container2.retina.reduceFactor ? delay * millisecondsToSeconds / container2.retina.reduceFactor : Infinity, defaultColorSpeed = 0, colorSpeed = getRangeValue(animation.speed ?? defaultColorSpeed);
-        return (initValue + colorSpeed * container2.fpsLimit / emitFactor + colorOffset * factor) % maxValue2;
+        return (initValue + colorSpeed * container2.fpsLimit / emitFactor + colorOffset * factor) % maxValue;
       };
-      this._engine = engine2;
+      this._engine = engine;
       this._currentDuration = 0;
       this._currentEmitDelay = 0;
       this._currentSpawnDelay = 0;
@@ -14831,7 +10541,7 @@
       this._paused = !this.options.autoPlay;
       this._particlesOptions = particlesOptions;
       this._size = this._calcSize();
-      this.size = getSize2(this._size, this.container.canvas.size);
+      this.size = getSize(this._size, this.container.canvas.size);
       this._lifeCount = this.options.life.count ?? defaultLifeCount;
       this._immortal = this._lifeCount <= minLifeCount;
       if (this.options.domId) {
@@ -14899,7 +10609,7 @@
       const initialPosition = this._initialPosition, container = this.container;
       this.position = initialPosition && isPointInside(initialPosition, container.canvas.size, Vector.origin) ? initialPosition : this._calcPosition();
       this._size = this._calcSize();
-      this.size = getSize2(this._size, container.canvas.size);
+      this.size = getSize(this._size, container.canvas.size);
       this._shape?.resize(this.position, this.size);
     }
     update(delta) {
@@ -15053,9 +10763,9 @@
 
   // node_modules/@tsparticles/plugin-emitters/browser/Emitters.js
   var Emitters = class {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       this.container = container;
-      this._engine = engine2;
+      this._engine = engine;
       this.array = [];
       this.emitters = [];
       this.interactivityEmitters = {
@@ -15173,8 +10883,8 @@
 
   // node_modules/@tsparticles/plugin-emitters/browser/EmittersPlugin.js
   var EmittersPlugin = class {
-    constructor(engine2) {
-      this._engine = engine2;
+    constructor(engine) {
+      this._engine = engine;
       this.id = "emitters";
     }
     getPlugin(container) {
@@ -15257,8 +10967,8 @@
   // node_modules/@tsparticles/plugin-emitters/browser/ShapeManager.js
   var shapeGeneratorss = /* @__PURE__ */ new Map();
   var ShapeManager = class {
-    constructor(engine2) {
-      this._engine = engine2;
+    constructor(engine) {
+      this._engine = engine;
     }
     addShapeGenerator(name, generator) {
       if (!this.getShapeGenerator(name)) {
@@ -15288,24 +10998,24 @@
   };
 
   // node_modules/@tsparticles/plugin-emitters/browser/index.js
-  async function loadEmittersPlugin(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    if (!engine2.emitterShapeManager) {
-      engine2.emitterShapeManager = new ShapeManager(engine2);
+  async function loadEmittersPlugin(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    if (!engine.emitterShapeManager) {
+      engine.emitterShapeManager = new ShapeManager(engine);
     }
-    if (!engine2.addEmitterShapeGenerator) {
-      engine2.addEmitterShapeGenerator = (name, generator) => {
-        engine2.emitterShapeManager?.addShapeGenerator(name, generator);
+    if (!engine.addEmitterShapeGenerator) {
+      engine.addEmitterShapeGenerator = (name, generator) => {
+        engine.emitterShapeManager?.addShapeGenerator(name, generator);
       };
     }
-    const plugin = new EmittersPlugin(engine2);
-    await engine2.addPlugin(plugin, refresh);
+    const plugin = new EmittersPlugin(engine);
+    await engine.addPlugin(plugin, refresh);
   }
 
   // node_modules/@tsparticles/plugin-emitters-shape-circle/browser/EmittersCircleShape.js
   var quarter2 = 0.25;
   var double3 = 2;
-  var doublePI3 = Math.PI * double3;
+  var doublePI2 = Math.PI * double3;
   var squareExp3 = 2;
   var half3 = 0.5;
   var EmittersCircleShape = class extends EmitterShapeBase {
@@ -15316,7 +11026,7 @@
     }
     randomPosition() {
       const size = this.size, fill = this.fill, position = this.position, generateTheta = (x, y) => {
-        const u = getRandom() * quarter2, theta = Math.atan(y / x * Math.tan(doublePI3 * u)), v = getRandom();
+        const u = getRandom() * quarter2, theta = Math.atan(y / x * Math.tan(doublePI2 * u)), v = getRandom();
         if (v < quarter2) {
           return theta;
         } else if (v < double3 * quarter2) {
@@ -15344,8 +11054,8 @@
   };
 
   // node_modules/@tsparticles/plugin-emitters-shape-circle/browser/index.js
-  async function loadEmittersShapeCircle(engine2, refresh = true) {
-    const emittersEngine = engine2;
+  async function loadEmittersShapeCircle(engine, refresh = true) {
+    const emittersEngine = engine;
     emittersEngine.checkVersion("3.9.1");
     emittersEngine.addEmitterShapeGenerator?.("circle", new EmittersCircleShapeGenerator());
     await emittersEngine.refresh(refresh);
@@ -15423,8 +11133,8 @@
   };
 
   // node_modules/@tsparticles/plugin-emitters-shape-square/browser/index.js
-  async function loadEmittersShapeSquare(engine2, refresh = true) {
-    const emittersEngine = engine2;
+  async function loadEmittersShapeSquare(engine, refresh = true) {
+    const emittersEngine = engine;
     emittersEngine.checkVersion("3.9.1");
     emittersEngine.addEmitterShapeGenerator?.("square", new EmittersSquareShapeGenerator());
     await emittersEngine.refresh(refresh);
@@ -15512,9 +11222,9 @@
   };
 
   // node_modules/@tsparticles/interaction-external-trail/browser/index.js
-  async function loadExternalTrailInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalTrail", (container) => {
+  async function loadExternalTrailInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalTrail", (container) => {
       return Promise.resolve(new TrailMaker(container));
     }, refresh);
   }
@@ -15529,9 +11239,9 @@
 
   // node_modules/@tsparticles/updater-roll/browser/Utils.js
   var double4 = 2;
-  var doublePI4 = Math.PI * double4;
+  var doublePI3 = Math.PI * double4;
   var maxAngle2 = 360;
-  function initParticle(engine2, particle) {
+  function initParticle(engine, particle) {
     const rollOpt = particle.options.roll;
     if (!rollOpt?.enable) {
       particle.roll = {
@@ -15547,11 +11257,11 @@
       enable: rollOpt.enable,
       horizontal: rollOpt.mode === RollMode.horizontal || rollOpt.mode === RollMode.both,
       vertical: rollOpt.mode === RollMode.vertical || rollOpt.mode === RollMode.both,
-      angle: getRandom() * doublePI4,
+      angle: getRandom() * doublePI3,
       speed: getRangeValue(rollOpt.speed) / maxAngle2
     };
     if (rollOpt.backColor) {
-      particle.backColor = rangeColorToHsl(engine2, rollOpt.backColor);
+      particle.backColor = rangeColorToHsl(engine, rollOpt.backColor);
     } else if (rollOpt.darken.enable && rollOpt.enlighten.enable) {
       const alterType = getRandom() >= half ? AlterType.darken : AlterType.enlighten;
       particle.roll.alter = {
@@ -15575,10 +11285,10 @@
     if (!data || !roll?.enable) {
       return;
     }
-    const speed = data.speed * delta.factor, max2 = doublePI4;
+    const speed = data.speed * delta.factor, max = doublePI3;
     data.angle += speed;
-    if (data.angle > max2) {
-      data.angle -= max2;
+    if (data.angle > max) {
+      data.angle -= max;
     }
   }
 
@@ -15633,8 +11343,8 @@
 
   // node_modules/@tsparticles/updater-roll/browser/RollUpdater.js
   var RollUpdater = class {
-    constructor(engine2) {
-      this._engine = engine2;
+    constructor(engine) {
+      this._engine = engine;
     }
     getTransformValues(particle) {
       const roll = particle.roll?.enable && particle.roll, rollHorizontal = roll && roll.horizontal, rollVertical = roll && roll.vertical;
@@ -15667,10 +11377,10 @@
   };
 
   // node_modules/@tsparticles/updater-roll/browser/index.js
-  async function loadRollUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("roll", () => {
-      return Promise.resolve(new RollUpdater(engine2));
+  async function loadRollUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("roll", () => {
+      return Promise.resolve(new RollUpdater(engine));
     }, refresh);
   }
 
@@ -15682,7 +11392,7 @@
   var moveSpeedFactor = 60;
   var minSpinRadius = 0;
   var spinFactor = 0.01;
-  var doublePI5 = Math.PI * double5;
+  var doublePI4 = Math.PI * double5;
   function applyDistance(particle) {
     const initialPosition = particle.initialPosition, { dx, dy } = getDistances(initialPosition, particle.position), dxFixed = Math.abs(dx), dyFixed = Math.abs(dy), { maxDistance } = particle.retina, hDistance = maxDistance.horizontal, vDistance = maxDistance.vertical;
     if (!hDistance && !vDistance) {
@@ -15773,8 +11483,8 @@
       particle.velocity.addTo(path);
     }
     if (pathOptions.clamp) {
-      particle.velocity.x = clamp5(particle.velocity.x, -identity2, identity2);
-      particle.velocity.y = clamp5(particle.velocity.y, -identity2, identity2);
+      particle.velocity.x = clamp3(particle.velocity.x, -identity2, identity2);
+      particle.velocity.y = clamp3(particle.velocity.y, -identity2, identity2);
     }
     particle.lastPathTime -= particle.pathDelay;
   }
@@ -15794,7 +11504,7 @@
     particle.spin = {
       center: spinCenter,
       direction: particle.velocity.x >= minVelocity3 ? RotateDirection.clockwise : RotateDirection.counterClockwise,
-      angle: getRandom() * doublePI5,
+      angle: getRandom() * doublePI4,
       radius: distance,
       acceleration: particle.retina.spinAcceleration
     };
@@ -15837,22 +11547,22 @@
   };
 
   // node_modules/@tsparticles/move-base/browser/index.js
-  async function loadBaseMover(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addMover("base", () => {
+  async function loadBaseMover(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addMover("base", () => {
       return Promise.resolve(new BaseMover());
     }, refresh);
   }
 
   // node_modules/@tsparticles/shape-circle/browser/Utils.js
   var double6 = 2;
-  var doublePI6 = Math.PI * double6;
+  var doublePI5 = Math.PI * double6;
   var minAngle2 = 0;
   var origin = { x: 0, y: 0 };
   function drawCircle(data) {
     const { context: context3, particle, radius } = data;
     if (!particle.circleRange) {
-      particle.circleRange = { min: minAngle2, max: doublePI6 };
+      particle.circleRange = { min: minAngle2, max: doublePI5 };
     }
     const circleRange = particle.circleRange;
     context3.arc(origin.x, origin.y, radius, circleRange.min, circleRange.max, false);
@@ -15877,7 +11587,7 @@
         max: maxAngle3,
         min: minAngle3
       };
-      particle.circleRange = !isObject2(angle) ? {
+      particle.circleRange = !isObject(angle) ? {
         min: minAngle3,
         max: degToRad(angle)
       } : { min: degToRad(angle.min), max: degToRad(angle.max) };
@@ -15885,16 +11595,16 @@
   };
 
   // node_modules/@tsparticles/shape-circle/browser/index.js
-  async function loadCircleShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new CircleDrawer(), refresh);
+  async function loadCircleShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new CircleDrawer(), refresh);
   }
 
   // node_modules/@tsparticles/updater-color/browser/ColorUpdater.js
   var ColorUpdater = class {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       this._container = container;
-      this._engine = engine2;
+      this._engine = engine;
     }
     init(particle) {
       const hslColor = rangeColorToHsl(this._engine, particle.options.color, particle.id, particle.options.reduceDuplicates);
@@ -15903,8 +11613,8 @@
       }
     }
     isEnabled(particle) {
-      const { h: hAnimation, s: sAnimation, l: lAnimation } = particle.options.color.animation, { color: color2 } = particle;
-      return !particle.destroyed && !particle.spawning && (color2?.h.value !== void 0 && hAnimation.enable || color2?.s.value !== void 0 && sAnimation.enable || color2?.l.value !== void 0 && lAnimation.enable);
+      const { h: hAnimation, s: sAnimation, l: lAnimation } = particle.options.color.animation, { color } = particle;
+      return !particle.destroyed && !particle.spawning && (color?.h.value !== void 0 && hAnimation.enable || color?.s.value !== void 0 && sAnimation.enable || color?.l.value !== void 0 && lAnimation.enable);
     }
     update(particle, delta) {
       updateColor(particle.color, delta);
@@ -15912,10 +11622,10 @@
   };
 
   // node_modules/@tsparticles/updater-color/browser/index.js
-  async function loadColorUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("color", (container) => {
-      return Promise.resolve(new ColorUpdater(container, engine2));
+  async function loadColorUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("color", (container) => {
+      return Promise.resolve(new ColorUpdater(container, engine));
     }, refresh);
   }
 
@@ -15937,11 +11647,11 @@
       this.key = "hex";
       this.stringPrefix = "#";
     }
-    handleColor(color2) {
-      return this._parseString(color2.value);
+    handleColor(color) {
+      return this._parseString(color.value);
     }
-    handleRangeColor(color2) {
-      return this._parseString(color2.value);
+    handleRangeColor(color) {
+      return this._parseString(color.value);
     }
     parseString(input) {
       return this._parseString(input);
@@ -15966,9 +11676,9 @@
   };
 
   // node_modules/@tsparticles/plugin-hex-color/browser/index.js
-  async function loadHexColorPlugin(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addColorManager(new HexColorManager(), refresh);
+  async function loadHexColorPlugin(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addColorManager(new HexColorManager(), refresh);
   }
 
   // node_modules/@tsparticles/plugin-hsl-color/browser/HslColorManager.js
@@ -15984,14 +11694,14 @@
       this.key = "hsl";
       this.stringPrefix = "hsl";
     }
-    handleColor(color2) {
-      const colorValue = color2.value, hslColor = colorValue.hsl ?? color2.value;
+    handleColor(color) {
+      const colorValue = color.value, hslColor = colorValue.hsl ?? color.value;
       if (hslColor.h !== void 0 && hslColor.s !== void 0 && hslColor.l !== void 0) {
         return hslToRgb(hslColor);
       }
     }
-    handleRangeColor(color2) {
-      const colorValue = color2.value, hslColor = colorValue.hsl ?? color2.value;
+    handleRangeColor(color) {
+      const colorValue = color.value, hslColor = colorValue.hsl ?? color.value;
       if (hslColor.h !== void 0 && hslColor.l !== void 0) {
         return hslToRgb({
           h: getRangeValue(hslColor.h),
@@ -16005,7 +11715,7 @@
         return;
       }
       const regex = /hsla?\(\s*(\d+)\s*[\s,]\s*(\d+)%\s*[\s,]\s*(\d+)%\s*([\s,]\s*(0|1|0?\.\d+|(\d{1,3})%)\s*)?\)/i, result = regex.exec(input), minLength = 4, defaultAlpha3 = 1, radix = 10;
-      return result ? hslaToRgba2({
+      return result ? hslaToRgba({
         a: result.length > minLength ? parseAlpha(result[HslIndexes.a]) : defaultAlpha3,
         h: parseInt(result[HslIndexes.h], radix),
         l: parseInt(result[HslIndexes.l], radix),
@@ -16015,9 +11725,9 @@
   };
 
   // node_modules/@tsparticles/plugin-hsl-color/browser/index.js
-  async function loadHslColorPlugin(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addColorManager(new HslColorManager(), refresh);
+  async function loadHslColorPlugin(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addColorManager(new HslColorManager(), refresh);
   }
 
   // node_modules/@tsparticles/updater-opacity/browser/OpacityUpdater.js
@@ -16037,8 +11747,8 @@
       }
     }
     isEnabled(particle) {
-      const none3 = 0;
-      return !particle.destroyed && !particle.spawning && !!particle.opacity && particle.opacity.enable && ((particle.opacity.maxLoops ?? none3) <= none3 || (particle.opacity.maxLoops ?? none3) > none3 && (particle.opacity.loops ?? none3) < (particle.opacity.maxLoops ?? none3));
+      const none2 = 0;
+      return !particle.destroyed && !particle.spawning && !!particle.opacity && particle.opacity.enable && ((particle.opacity.maxLoops ?? none2) <= none2 || (particle.opacity.maxLoops ?? none2) > none2 && (particle.opacity.loops ?? none2) < (particle.opacity.maxLoops ?? none2));
     }
     reset(particle) {
       if (particle.opacity) {
@@ -16055,9 +11765,9 @@
   };
 
   // node_modules/@tsparticles/updater-opacity/browser/index.js
-  async function loadOpacityUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("opacity", (container) => {
+  async function loadOpacityUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("opacity", (container) => {
       return Promise.resolve(new OpacityUpdater(container));
     }, refresh);
   }
@@ -16361,9 +12071,9 @@
   };
 
   // node_modules/@tsparticles/updater-out-modes/browser/index.js
-  async function loadOutModesUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("outModes", (container) => {
+  async function loadOutModesUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("outModes", (container) => {
       return Promise.resolve(new OutOfCanvasUpdater(container));
     }, refresh);
   }
@@ -16381,14 +12091,14 @@
       this.key = "rgb";
       this.stringPrefix = "rgb";
     }
-    handleColor(color2) {
-      const colorValue = color2.value, rgbColor = colorValue.rgb ?? color2.value;
+    handleColor(color) {
+      const colorValue = color.value, rgbColor = colorValue.rgb ?? color.value;
       if (rgbColor.r !== void 0) {
         return rgbColor;
       }
     }
-    handleRangeColor(color2) {
-      const colorValue = color2.value, rgbColor = colorValue.rgb ?? color2.value;
+    handleRangeColor(color) {
+      const colorValue = color.value, rgbColor = colorValue.rgb ?? color.value;
       if (rgbColor.r !== void 0) {
         return {
           r: getRangeValue(rgbColor.r),
@@ -16412,9 +12122,9 @@
   };
 
   // node_modules/@tsparticles/plugin-rgb-color/browser/index.js
-  async function loadRgbColorPlugin(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addColorManager(new RgbColorManager(), refresh);
+  async function loadRgbColorPlugin(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addColorManager(new RgbColorManager(), refresh);
   }
 
   // node_modules/@tsparticles/updater-size/browser/SizeUpdater.js
@@ -16444,35 +12154,35 @@
   };
 
   // node_modules/@tsparticles/updater-size/browser/index.js
-  async function loadSizeUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("size", () => {
+  async function loadSizeUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("size", () => {
       return Promise.resolve(new SizeUpdater());
     }, refresh);
   }
 
   // node_modules/@tsparticles/basic/browser/index.js
-  async function loadBasic(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await loadHexColorPlugin(engine2, false);
-    await loadHslColorPlugin(engine2, false);
-    await loadRgbColorPlugin(engine2, false);
-    await loadBaseMover(engine2, false);
-    await loadCircleShape(engine2, false);
-    await loadColorUpdater(engine2, false);
-    await loadOpacityUpdater(engine2, false);
-    await loadOutModesUpdater(engine2, false);
-    await loadSizeUpdater(engine2, false);
-    await engine2.refresh(refresh);
+  async function loadBasic(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await loadHexColorPlugin(engine, false);
+    await loadHslColorPlugin(engine, false);
+    await loadRgbColorPlugin(engine, false);
+    await loadBaseMover(engine, false);
+    await loadCircleShape(engine, false);
+    await loadColorUpdater(engine, false);
+    await loadOpacityUpdater(engine, false);
+    await loadOutModesUpdater(engine, false);
+    await loadSizeUpdater(engine, false);
+    await engine.refresh(refresh);
   }
 
   // node_modules/@tsparticles/plugin-easing-quad/browser/index.js
-  async function loadEasingQuadPlugin(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addEasing(EasingType.easeInQuad, (value) => value ** 2, false);
-    await engine2.addEasing(EasingType.easeOutQuad, (value) => 1 - (1 - value) ** 2, false);
-    await engine2.addEasing(EasingType.easeInOutQuad, (value) => value < 0.5 ? 2 * value ** 2 : 1 - (-2 * value + 2) ** 2 / 2, false);
-    await engine2.refresh(refresh);
+  async function loadEasingQuadPlugin(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addEasing(EasingType.easeInQuad, (value) => value ** 2, false);
+    await engine.addEasing(EasingType.easeOutQuad, (value) => 1 - (1 - value) ** 2, false);
+    await engine.addEasing(EasingType.easeInOutQuad, (value) => value < 0.5 ? 2 * value ** 2 : 1 - (-2 * value + 2) ** 2 / 2, false);
+    await engine.refresh(refresh);
   }
 
   // node_modules/@tsparticles/shape-emoji/browser/Utils.js
@@ -16496,19 +12206,19 @@
       this._emojiShapeDict = /* @__PURE__ */ new Map();
     }
     destroy() {
-      for (const [key2, data] of this._emojiShapeDict) {
+      for (const [key, data] of this._emojiShapeDict) {
         if (data instanceof ImageBitmap) {
           data?.close();
         }
-        this._emojiShapeDict.delete(key2);
+        this._emojiShapeDict.delete(key);
       }
     }
     draw(data) {
-      const key2 = data.particle.emojiDataKey;
-      if (!key2) {
+      const key = data.particle.emojiDataKey;
+      if (!key) {
         return;
       }
-      const image = this._emojiShapeDict.get(key2);
+      const image = this._emojiShapeDict.get(key);
       if (!image) {
         return;
       }
@@ -16551,9 +12261,9 @@
         ...shapeData,
         ...emoji
       }, font = emojiOptions.font, value = emojiOptions.value;
-      const key2 = `${value}_${font}`;
-      if (this._emojiShapeDict.has(key2)) {
-        particle.emojiDataKey = key2;
+      const key = `${value}_${font}`;
+      if (this._emojiShapeDict.has(key)) {
+        particle.emojiDataKey = key;
         return;
       }
       const padding = emojiOptions.padding * double19, maxSize = getRangeMax(particle.size.value), fullSize = maxSize + padding, canvasSize = fullSize * double19;
@@ -16582,33 +12292,33 @@
         context3.fillText(value, fullSize, fullSize);
         image = canvas;
       }
-      this._emojiShapeDict.set(key2, image);
-      particle.emojiDataKey = key2;
+      this._emojiShapeDict.set(key, image);
+      particle.emojiDataKey = key;
     }
   };
 
   // node_modules/@tsparticles/shape-emoji/browser/index.js
-  async function loadEmojiShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new EmojiDrawer(), refresh);
+  async function loadEmojiShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new EmojiDrawer(), refresh);
   }
 
   // node_modules/@tsparticles/interaction-external-attract/browser/Utils.js
   var minFactor = 1;
   var identity3 = 1;
   var minRadius2 = 0;
-  function processAttract(engine2, container, position, attractRadius, area, queryCb) {
+  function processAttract(engine, container, position, attractRadius, area, queryCb) {
     const attractOptions = container.actualOptions.interactivity.modes.attract;
     if (!attractOptions) {
       return;
     }
     const query = container.particles.quadTree.query(area, queryCb);
     for (const particle of query) {
-      const { dx, dy, distance } = getDistances(particle.position, position), velocity = attractOptions.speed * attractOptions.factor, attractFactor2 = clamp5(engine2.getEasing(attractOptions.easing)(identity3 - distance / attractRadius) * velocity, minFactor, attractOptions.maxSpeed), normVec = Vector.create(!distance ? velocity : dx / distance * attractFactor2, !distance ? velocity : dy / distance * attractFactor2);
+      const { dx, dy, distance } = getDistances(particle.position, position), velocity = attractOptions.speed * attractOptions.factor, attractFactor2 = clamp3(engine.getEasing(attractOptions.easing)(identity3 - distance / attractRadius) * velocity, minFactor, attractOptions.maxSpeed), normVec = Vector.create(!distance ? velocity : dx / distance * attractFactor2, !distance ? velocity : dy / distance * attractFactor2);
       particle.position.subFrom(normVec);
     }
   }
-  function clickAttract(engine2, container, enabledCb) {
+  function clickAttract(engine, container, enabledCb) {
     if (!container.attract) {
       container.attract = { particles: [] };
     }
@@ -16627,17 +12337,17 @@
       if (!attractRadius || attractRadius < minRadius2 || !mousePos) {
         return;
       }
-      processAttract(engine2, container, mousePos, attractRadius, new Circle(mousePos.x, mousePos.y, attractRadius), (p) => enabledCb(p));
+      processAttract(engine, container, mousePos, attractRadius, new Circle(mousePos.x, mousePos.y, attractRadius), (p) => enabledCb(p));
     } else if (attract.clicking === false) {
       attract.particles = [];
     }
   }
-  function hoverAttract(engine2, container, enabledCb) {
+  function hoverAttract(engine, container, enabledCb) {
     const mousePos = container.interactivity.mouse.position, attractRadius = container.retina.attractModeDistance;
     if (!attractRadius || attractRadius < minRadius2 || !mousePos) {
       return;
     }
-    processAttract(engine2, container, mousePos, attractRadius, new Circle(mousePos.x, mousePos.y, attractRadius), (p) => enabledCb(p));
+    processAttract(engine, container, mousePos, attractRadius, new Circle(mousePos.x, mousePos.y, attractRadius), (p) => enabledCb(p));
   }
 
   // node_modules/@tsparticles/interaction-external-attract/browser/Options/Classes/Attract.js
@@ -16678,9 +12388,9 @@
   // node_modules/@tsparticles/interaction-external-attract/browser/Attractor.js
   var attractMode = "attract";
   var Attractor = class extends ExternalInteractorBase {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       super(container);
-      this._engine = engine2;
+      this._engine = engine;
       if (!container.attract) {
         container.attract = { particles: [] };
       }
@@ -16751,17 +12461,17 @@
   };
 
   // node_modules/@tsparticles/interaction-external-attract/browser/index.js
-  async function loadExternalAttractInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalAttract", (container) => {
-      return Promise.resolve(new Attractor(engine2, container));
+  async function loadExternalAttractInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalAttract", (container) => {
+      return Promise.resolve(new Attractor(engine, container));
     }, refresh);
   }
 
   // node_modules/@tsparticles/interaction-external-bounce/browser/Utils.js
   var squareExp4 = 2;
   var half5 = 0.5;
-  var halfPI2 = Math.PI * half5;
+  var halfPI = Math.PI * half5;
   var double7 = 2;
   var toleranceFactor = 10;
   var minRadius3 = 0;
@@ -16772,7 +12482,7 @@
         circleBounce(circleBounceDataFromParticle(particle), {
           position,
           radius,
-          mass: radius ** squareExp4 * halfPI2,
+          mass: radius ** squareExp4 * halfPI,
           velocity: Vector.origin,
           factor: Vector.origin
         });
@@ -16860,9 +12570,9 @@
   };
 
   // node_modules/@tsparticles/interaction-external-bounce/browser/index.js
-  async function loadExternalBounceInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalBounce", (container) => {
+  async function loadExternalBounceInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalBounce", (container) => {
       return Promise.resolve(new Bouncer(container));
     }, refresh);
   }
@@ -16892,8 +12602,8 @@
       }
       if (data.color !== void 0) {
         const sourceColor = isArray(this.color) ? void 0 : this.color;
-        this.color = executeOnSingleOrMultiple(data.color, (color2) => {
-          return OptionsColor.create(sourceColor, color2);
+        this.color = executeOnSingleOrMultiple(data.color, (color) => {
+          return OptionsColor.create(sourceColor, color);
         });
       }
       if (data.size !== void 0) {
@@ -16946,10 +12656,10 @@
   function calculateBubbleValue(particleValue, modeValue, optionsValue, ratio) {
     if (modeValue >= optionsValue) {
       const value = particleValue + (modeValue - optionsValue) * ratio;
-      return clamp5(value, particleValue, modeValue);
+      return clamp3(value, particleValue, modeValue);
     } else if (modeValue < optionsValue) {
       const value = particleValue - (optionsValue - modeValue) * ratio;
-      return clamp5(value, modeValue, particleValue);
+      return clamp3(value, modeValue, particleValue);
     }
   }
 
@@ -16965,7 +12675,7 @@
   var half6 = 0.5;
   var defaultRatio2 = 1;
   var Bubbler = class extends ExternalInteractorBase {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       super(container);
       this._clickBubble = () => {
         const container2 = this.container, options = container2.actualOptions, mouseClickPos = container2.interactivity.mouse.clickPosition, bubbleOptions = options.interactivity.modes.bubble;
@@ -17160,7 +12870,7 @@
           }
         });
       };
-      this._engine = engine2;
+      this._engine = engine;
       if (!container.bubble) {
         container.bubble = {};
       }
@@ -17224,10 +12934,10 @@
   };
 
   // node_modules/@tsparticles/interaction-external-bubble/browser/index.js
-  async function loadExternalBubbleInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalBubble", (container) => {
-      return Promise.resolve(new Bubbler(container, engine2));
+  async function loadExternalBubbleInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalBubble", (container) => {
+      return Promise.resolve(new Bubbler(container, engine));
     }, refresh);
   }
 
@@ -17278,7 +12988,7 @@
     }
     const sourcePos = p1.getPosition(), destPos = p2.getPosition(), midRgb = colorMix(color1, color2, p1.getRadius(), p2.getRadius()), grad = context3.createLinearGradient(sourcePos.x, sourcePos.y, destPos.x, destPos.y);
     grad.addColorStop(gradientMin, getStyleFromHsl(color1, opacity));
-    grad.addColorStop(clamp5(gradStop, gradientMin, gradientMax), getStyleFromRgb(midRgb, opacity));
+    grad.addColorStop(clamp3(gradStop, gradientMin, gradientMax), getStyleFromRgb(midRgb, opacity));
     grad.addColorStop(gradientMax, getStyleFromHsl(color2, opacity));
     return grad;
   }
@@ -17362,9 +13072,9 @@
   };
 
   // node_modules/@tsparticles/interaction-external-connect/browser/index.js
-  async function loadExternalConnectInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalConnect", (container) => {
+  async function loadExternalConnectInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalConnect", (container) => {
       return Promise.resolve(new Connector(container));
     }, refresh);
   }
@@ -17432,9 +13142,9 @@
   var minDistance4 = 0;
   var minOpacity = 0;
   var Grabber = class extends ExternalInteractorBase {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       super(container);
-      this._engine = engine2;
+      this._engine = engine;
     }
     clear() {
     }
@@ -17497,10 +13207,10 @@
   };
 
   // node_modules/@tsparticles/interaction-external-grab/browser/index.js
-  async function loadExternalGrabInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalGrab", (container) => {
-      return Promise.resolve(new Grabber(container, engine2));
+  async function loadExternalGrabInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalGrab", (container) => {
+      return Promise.resolve(new Grabber(container, engine));
     }, refresh);
   }
 
@@ -17535,9 +13245,9 @@
   };
 
   // node_modules/@tsparticles/interaction-external-pause/browser/index.js
-  async function loadExternalPauseInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalPause", (container) => {
+  async function loadExternalPauseInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalPause", (container) => {
       return Promise.resolve(new Pauser(container));
     }, refresh);
   }
@@ -17616,9 +13326,9 @@
   };
 
   // node_modules/@tsparticles/interaction-external-push/browser/index.js
-  async function loadExternalPushInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalPush", (container) => {
+  async function loadExternalPushInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalPush", (container) => {
       return Promise.resolve(new Pusher(container));
     }, refresh);
   }
@@ -17675,9 +13385,9 @@
   };
 
   // node_modules/@tsparticles/interaction-external-remove/browser/index.js
-  async function loadExternalRemoveInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalRemove", (container) => {
+  async function loadExternalRemoveInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalRemove", (container) => {
       return Promise.resolve(new Remover(container));
     }, refresh);
   }
@@ -17760,7 +13470,7 @@
   var easingOffset = 1;
   var half7 = 0.5;
   var Repulser = class extends ExternalInteractorBase {
-    constructor(engine2, container) {
+    constructor(engine, container) {
       super(container);
       this._clickRepulse = () => {
         const container2 = this.container, repulseOptions = container2.actualOptions.interactivity.modes.repulse;
@@ -17817,7 +13527,7 @@
         }
         const { easing, speed, factor, maxSpeed } = repulseOptions, easingFunc = this._engine.getEasing(easing), velocity = (divRepulse?.speed ?? speed) * factor;
         for (const particle of query) {
-          const { dx, dy, distance } = getDistances(particle.position, position), repulseFactor = clamp5(easingFunc(easingOffset - distance / repulseRadius) * velocity, minSpeed, maxSpeed), normVec = Vector.create(!distance ? velocity : dx / distance * repulseFactor, !distance ? velocity : dy / distance * repulseFactor);
+          const { dx, dy, distance } = getDistances(particle.position, position), repulseFactor = clamp3(easingFunc(easingOffset - distance / repulseRadius) * velocity, minSpeed, maxSpeed), normVec = Vector.create(!distance ? velocity : dx / distance * repulseFactor, !distance ? velocity : dy / distance * repulseFactor);
           particle.position.addTo(normVec);
         }
       };
@@ -17838,7 +13548,7 @@
           this._processRepulse(pos, repulseRadius, area, divRepulse);
         });
       };
-      this._engine = engine2;
+      this._engine = engine;
       if (!container.repulse) {
         container.repulse = { particles: [] };
       }
@@ -17909,10 +13619,10 @@
   };
 
   // node_modules/@tsparticles/interaction-external-repulse/browser/index.js
-  async function loadExternalRepulseInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalRepulse", (container) => {
-      return Promise.resolve(new Repulser(engine2, container));
+  async function loadExternalRepulseInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalRepulse", (container) => {
+      return Promise.resolve(new Repulser(engine, container));
     }, refresh);
   }
 
@@ -17985,9 +13695,9 @@
   };
 
   // node_modules/@tsparticles/interaction-external-slow/browser/index.js
-  async function loadExternalSlowInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("externalSlow", (container) => {
+  async function loadExternalSlowInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("externalSlow", (container) => {
       return Promise.resolve(new Slower(container));
     }, refresh);
   }
@@ -17996,12 +13706,12 @@
   var stringStart = 0;
   var defaultOpacity3 = 1;
   var currentColorRegex = /(#(?:[0-9a-f]{2}){2,4}|(#[0-9a-f]{3})|(rgb|hsl)a?\((-?\d+%?[,\s]+){2,3}\s*[\d.]+%?\))|currentcolor/gi;
-  function replaceColorSvg(imageShape, color2, opacity) {
+  function replaceColorSvg(imageShape, color, opacity) {
     const { svgData } = imageShape;
     if (!svgData) {
       return "";
     }
-    const colorStyle = getStyleFromHsl(color2, opacity);
+    const colorStyle = getStyleFromHsl(color, opacity);
     if (svgData.includes("fill")) {
       return svgData.replace(currentColorRegex, () => colorStyle);
     }
@@ -18042,9 +13752,9 @@
     }
     image.loading = false;
   }
-  function replaceImageColor(image, imageData, color2, particle) {
-    const svgColoredData = replaceColorSvg(image, color2, particle.opacity?.value ?? defaultOpacity3), imageRes = {
-      color: color2,
+  function replaceImageColor(image, imageData, color, particle) {
+    const svgColoredData = replaceColorSvg(image, color, particle.opacity?.value ?? defaultOpacity3), imageRes = {
+      color,
       gif: imageData.gif,
       data: {
         ...image,
@@ -18184,14 +13894,14 @@
   function parseExtensionBlock(byteStream, gif, getFrameIndex, getTransparencyIndex) {
     switch (byteStream.nextByte()) {
       case GIFDataHeaders.GraphicsControlExtension: {
-        const frame2 = gif.frames[getFrameIndex(false)];
+        const frame = gif.frames[getFrameIndex(false)];
         byteStream.pos++;
         const packedByte = byteStream.nextByte();
-        frame2.GCreserved = (packedByte & 224) >>> 5;
-        frame2.disposalMethod = (packedByte & 28) >>> 2;
-        frame2.userInputDelayFlag = (packedByte & 2) === 2;
+        frame.GCreserved = (packedByte & 224) >>> 5;
+        frame.disposalMethod = (packedByte & 28) >>> 2;
+        frame.userInputDelayFlag = (packedByte & 2) === 2;
         const transparencyFlag = (packedByte & 1) === 1;
-        frame2.delayTime = byteStream.nextTwoBytes() * 10;
+        frame.delayTime = byteStream.nextTwoBytes() * 10;
         const transparencyIndex = byteStream.nextByte();
         if (transparencyFlag) {
           getTransparencyIndex(transparencyIndex);
@@ -18239,20 +13949,20 @@
     }
   }
   async function parseImageBlock(byteStream, gif, avgAlpha, getFrameIndex, getTransparencyIndex, progressCallback) {
-    const frame2 = gif.frames[getFrameIndex(true)];
-    frame2.left = byteStream.nextTwoBytes();
-    frame2.top = byteStream.nextTwoBytes();
-    frame2.width = byteStream.nextTwoBytes();
-    frame2.height = byteStream.nextTwoBytes();
+    const frame = gif.frames[getFrameIndex(true)];
+    frame.left = byteStream.nextTwoBytes();
+    frame.top = byteStream.nextTwoBytes();
+    frame.width = byteStream.nextTwoBytes();
+    frame.height = byteStream.nextTwoBytes();
     const packedByte = byteStream.nextByte(), localColorTableFlag = (packedByte & 128) === 128, interlacedFlag = (packedByte & 64) === 64;
-    frame2.sortFlag = (packedByte & 32) === 32;
-    frame2.reserved = (packedByte & 24) >>> 3;
+    frame.sortFlag = (packedByte & 32) === 32;
+    frame.reserved = (packedByte & 24) >>> 3;
     const localColorCount = 1 << (packedByte & 7) + 1;
     if (localColorTableFlag) {
-      frame2.localColorTable = parseColorTable(byteStream, localColorCount);
+      frame.localColorTable = parseColorTable(byteStream, localColorCount);
     }
     const getColor = (index) => {
-      const { r, g, b } = (localColorTableFlag ? frame2.localColorTable : gif.globalColorTable)[index];
+      const { r, g, b } = (localColorTableFlag ? frame.localColorTable : gif.globalColorTable)[index];
       if (index !== getTransparencyIndex(null)) {
         return { r, g, b, a: 255 };
       }
@@ -18260,7 +13970,7 @@
     };
     const image = (() => {
       try {
-        return new ImageData(frame2.width, frame2.height, { colorSpace: "srgb" });
+        return new ImageData(frame.width, frame.height, { colorSpace: "srgb" });
       } catch (error) {
         if (error instanceof DOMException && error.name === "IndexSizeError") {
           return null;
@@ -18278,7 +13988,7 @@
     };
     if (interlacedFlag) {
       for (let code = 0, size = minCodeSize + 1, pos = 0, dic = [[0]], pass = 0; pass < 4; pass++) {
-        if (InterlaceOffsets[pass] < frame2.height) {
+        if (InterlaceOffsets[pass] < frame.height) {
           let pixelPos = 0, lineIndex = 0, exit = false;
           while (!exit) {
             const last = code;
@@ -18298,25 +14008,25 @@
               }
               for (const item of dic[code]) {
                 const { r, g, b, a } = getColor(item);
-                image.data.set([r, g, b, a], InterlaceOffsets[pass] * frame2.width + InterlaceSteps[pass] * lineIndex + pixelPos % (frame2.width * 4));
+                image.data.set([r, g, b, a], InterlaceOffsets[pass] * frame.width + InterlaceSteps[pass] * lineIndex + pixelPos % (frame.width * 4));
                 pixelPos += 4;
               }
               if (dic.length === 1 << size && size < 12) {
                 size++;
               }
             }
-            if (pixelPos === frame2.width * 4 * (lineIndex + 1)) {
+            if (pixelPos === frame.width * 4 * (lineIndex + 1)) {
               lineIndex++;
-              if (InterlaceOffsets[pass] + InterlaceSteps[pass] * lineIndex >= frame2.height) {
+              if (InterlaceOffsets[pass] + InterlaceSteps[pass] * lineIndex >= frame.height) {
                 exit = true;
               }
             }
           }
         }
-        progressCallback?.(byteStream.pos / (byteStream.data.length - 1), getFrameIndex(false) + 1, image, { x: frame2.left, y: frame2.top }, { width: gif.width, height: gif.height });
+        progressCallback?.(byteStream.pos / (byteStream.data.length - 1), getFrameIndex(false) + 1, image, { x: frame.left, y: frame.top }, { width: gif.width, height: gif.height });
       }
-      frame2.image = image;
-      frame2.bitmap = await createImageBitmap(image);
+      frame.image = image;
+      frame.bitmap = await createImageBitmap(image);
     } else {
       let code = 0, size = minCodeSize + 1, pos = 0, pixelPos = -4, exit = false;
       const dic = [[0]];
@@ -18349,9 +14059,9 @@
           }
         }
       }
-      frame2.image = image;
-      frame2.bitmap = await createImageBitmap(image);
-      progressCallback?.((byteStream.pos + 1) / byteStream.data.length, getFrameIndex(false) + 1, frame2.image, { x: frame2.left, y: frame2.top }, { width: gif.width, height: gif.height });
+      frame.image = image;
+      frame.bitmap = await createImageBitmap(image);
+      progressCallback?.((byteStream.pos + 1) / byteStream.data.length, getFrameIndex(false) + 1, frame.image, { x: frame.left, y: frame.top }, { width: gif.width, height: gif.height });
     }
   }
   async function parseBlock(byteStream, gif, avgAlpha, getFrameIndex, getTransparencyIndex, progressCallback) {
@@ -18471,12 +14181,12 @@
         }
       } while (!await parseBlock(byteStream, gif, avgAlpha, getframeIndex, getTransparencyIndex, progressCallback));
       gif.frames.length--;
-      for (const frame2 of gif.frames) {
-        if (frame2.userInputDelayFlag && frame2.delayTime === 0) {
+      for (const frame of gif.frames) {
+        if (frame.userInputDelayFlag && frame.delayTime === 0) {
           gif.totalTime = Infinity;
           break;
         }
-        gif.totalTime += frame2.delayTime;
+        gif.totalTime += frame.delayTime;
       }
       return gif;
     } catch (error) {
@@ -18502,34 +14212,34 @@
       particle.gifLoopCount = image.gifLoopCount ?? defaultLoopCount;
     }
     let frameIndex = particle.gifFrame ?? defaultFrame;
-    const pos = { x: -image.gifData.width * half8, y: -image.gifData.height * half8 }, frame2 = image.gifData.frames[frameIndex];
+    const pos = { x: -image.gifData.width * half8, y: -image.gifData.height * half8 }, frame = image.gifData.frames[frameIndex];
     if (particle.gifTime === void 0) {
       particle.gifTime = initialTime;
     }
-    if (!frame2.bitmap) {
+    if (!frame.bitmap) {
       return;
     }
     context3.scale(radius / image.gifData.width, radius / image.gifData.height);
-    switch (frame2.disposalMethod) {
+    switch (frame.disposalMethod) {
       case DisposalMethod.UndefinedA:
       case DisposalMethod.UndefinedB:
       case DisposalMethod.UndefinedC:
       case DisposalMethod.UndefinedD:
       case DisposalMethod.Replace:
-        offscreenContext.drawImage(frame2.bitmap, frame2.left, frame2.top);
+        offscreenContext.drawImage(frame.bitmap, frame.left, frame.top);
         context3.drawImage(offscreenCanvas, pos.x, pos.y);
         offscreenContext.clearRect(origin2.x, origin2.y, offscreenCanvas.width, offscreenCanvas.height);
         break;
       case DisposalMethod.Combine:
-        offscreenContext.drawImage(frame2.bitmap, frame2.left, frame2.top);
+        offscreenContext.drawImage(frame.bitmap, frame.left, frame.top);
         context3.drawImage(offscreenCanvas, pos.x, pos.y);
         break;
       case DisposalMethod.RestoreBackground:
-        offscreenContext.drawImage(frame2.bitmap, frame2.left, frame2.top);
+        offscreenContext.drawImage(frame.bitmap, frame.left, frame.top);
         context3.drawImage(offscreenCanvas, pos.x, pos.y);
         offscreenContext.clearRect(origin2.x, origin2.y, offscreenCanvas.width, offscreenCanvas.height);
         if (!image.gifData.globalColorTable.length) {
-          offscreenContext.putImageData(image.gifData.frames[firstIndex].image, pos.x + frame2.left, pos.y + frame2.top);
+          offscreenContext.putImageData(image.gifData.frames[firstIndex].image, pos.x + frame.left, pos.y + frame.top);
         } else {
           offscreenContext.putImageData(image.gifData.backgroundImage, pos.x, pos.y);
         }
@@ -18537,7 +14247,7 @@
       case DisposalMethod.RestorePrevious:
         {
           const previousImageData = offscreenContext.getImageData(origin2.x, origin2.y, offscreenCanvas.width, offscreenCanvas.height);
-          offscreenContext.drawImage(frame2.bitmap, frame2.left, frame2.top);
+          offscreenContext.drawImage(frame.bitmap, frame.left, frame.top);
           context3.drawImage(offscreenCanvas, pos.x, pos.y);
           offscreenContext.clearRect(origin2.x, origin2.y, offscreenCanvas.width, offscreenCanvas.height);
           offscreenContext.putImageData(previousImageData, origin2.x, origin2.y);
@@ -18545,8 +14255,8 @@
         break;
     }
     particle.gifTime += delta.value;
-    if (particle.gifTime > frame2.delayTime) {
-      particle.gifTime -= frame2.delayTime;
+    if (particle.gifTime > frame.delayTime) {
+      particle.gifTime -= frame.delayTime;
       if (++frameIndex >= image.gifData.frames.length) {
         if (--particle.gifLoopCount <= defaultLoopCount) {
           return;
@@ -18582,7 +14292,7 @@
   var sides3 = 12;
   var defaultRatio3 = 1;
   var ImageDrawer = class {
-    constructor(engine2) {
+    constructor(engine) {
       this.validTypes = ["image", "images"];
       this.loadImageShape = async (imageShape) => {
         if (!this._engine.loadImage) {
@@ -18595,7 +14305,7 @@
           src: imageShape.src
         });
       };
-      this._engine = engine2;
+      this._engine = engine;
     }
     addImage(image) {
       if (!this._engine.images) {
@@ -18661,7 +14371,7 @@
       if (!imageData) {
         return;
       }
-      const color2 = particle.getFillColor(), image = images.find((t) => t.name === imageData.name || t.source === imageData.src);
+      const color = particle.getFillColor(), image = images.find((t) => t.name === imageData.name || t.source === imageData.src);
       if (!image) {
         return;
       }
@@ -18674,11 +14384,11 @@
       }
       void (async () => {
         let imageRes;
-        if (image.svgData && color2) {
-          imageRes = await replaceImageColor(image, imageData, color2, particle);
+        if (image.svgData && color) {
+          imageRes = await replaceImageColor(image, imageData, color, particle);
         } else {
           imageRes = {
-            color: color2,
+            color,
             data: image,
             element: image.element,
             gif: image.gif,
@@ -18738,9 +14448,9 @@
 
   // node_modules/@tsparticles/shape-image/browser/ImagePreloader.js
   var ImagePreloaderPlugin = class {
-    constructor(engine2) {
+    constructor(engine) {
       this.id = "imagePreloader";
-      this._engine = engine2;
+      this._engine = engine;
     }
     async getPlugin() {
       await Promise.resolve();
@@ -18772,18 +14482,18 @@
 
   // node_modules/@tsparticles/shape-image/browser/index.js
   var extLength = 3;
-  function addLoadImageToEngine(engine2) {
-    if (engine2.loadImage) {
+  function addLoadImageToEngine(engine) {
+    if (engine.loadImage) {
       return;
     }
-    engine2.loadImage = async (data) => {
+    engine.loadImage = async (data) => {
       if (!data.name && !data.src) {
         throw new Error(`${errorPrefix} no image source provided`);
       }
-      if (!engine2.images) {
-        engine2.images = [];
+      if (!engine.images) {
+        engine.images = [];
       }
-      if (engine2.images.find((t) => t.name === data.name || t.source === data.src)) {
+      if (engine.images.find((t) => t.name === data.name || t.source === data.src)) {
         return;
       }
       try {
@@ -18797,7 +14507,7 @@
           replaceColor: data.replaceColor,
           ratio: data.width && data.height ? data.width / data.height : void 0
         };
-        engine2.images.push(image);
+        engine.images.push(image);
         let imageFunc;
         if (data.gif) {
           imageFunc = loadGifImage;
@@ -18810,12 +14520,12 @@
       }
     };
   }
-  async function loadImageShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    addLoadImageToEngine(engine2);
-    const preloader = new ImagePreloaderPlugin(engine2);
-    await engine2.addPlugin(preloader, refresh);
-    await engine2.addShape(new ImageDrawer(engine2), refresh);
+  async function loadImageShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    addLoadImageToEngine(engine);
+    const preloader = new ImagePreloaderPlugin(engine);
+    await engine.addPlugin(preloader, refresh);
+    await engine.addShape(new ImageDrawer(engine), refresh);
   }
 
   // node_modules/@tsparticles/updater-life/browser/Options/Classes/LifeDelay.js
@@ -18979,9 +14689,9 @@
   };
 
   // node_modules/@tsparticles/updater-life/browser/index.js
-  async function loadLifeUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("life", async (container) => {
+  async function loadLifeUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("life", async (container) => {
       return Promise.resolve(new LifeUpdater(container));
     }, refresh);
   }
@@ -19009,9 +14719,9 @@
   };
 
   // node_modules/@tsparticles/shape-line/browser/index.js
-  async function loadLineShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new LineDrawer(), refresh);
+  async function loadLineShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new LineDrawer(), refresh);
   }
 
   // node_modules/@tsparticles/move-parallax/browser/ParallaxMover.js
@@ -19044,9 +14754,9 @@
   };
 
   // node_modules/@tsparticles/move-parallax/browser/index.js
-  async function loadParallaxMover(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addMover("parallax", () => {
+  async function loadParallaxMover(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addMover("parallax", () => {
       return Promise.resolve(new ParallaxMover());
     }, refresh);
   }
@@ -19087,9 +14797,9 @@
   };
 
   // node_modules/@tsparticles/interaction-particles-attract/browser/index.js
-  async function loadParticlesAttractInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("particlesAttract", (container) => {
+  async function loadParticlesAttractInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("particlesAttract", (container) => {
       return Promise.resolve(new Attractor2(container));
     }, refresh);
   }
@@ -19099,7 +14809,7 @@
   var absorbFactor2 = 10;
   var minAbsorbFactor = 0;
   function updateAbsorb(p1, r1, p2, r2, delta, pixelRatio) {
-    const factor = clamp5(p1.options.collisions.absorb.speed * delta.factor / absorbFactor2, minAbsorbFactor, r2);
+    const factor = clamp3(p1.options.collisions.absorb.speed * delta.factor / absorbFactor2, minAbsorbFactor, r2);
     p1.size.value += factor * half10;
     p2.size.value -= factor;
     if (r2 <= pixelRatio) {
@@ -19208,9 +14918,9 @@
   };
 
   // node_modules/@tsparticles/interaction-particles-collisions/browser/index.js
-  async function loadParticlesCollisionsInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addInteractor("particlesCollisions", (container) => {
+  async function loadParticlesCollisionsInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addInteractor("particlesCollisions", (container) => {
       return Promise.resolve(new Collider(container));
     }, refresh);
   }
@@ -19223,9 +14933,9 @@
       this.canvasSize = canvasSize;
       this.canvasSize = { ...canvasSize };
     }
-    contains(point2) {
-      const { width, height } = this.canvasSize, { x, y } = point2;
-      return super.contains(point2) || super.contains({ x: x - width, y }) || super.contains({ x: x - width, y: y - height }) || super.contains({ x, y: y - height });
+    contains(point) {
+      const { width, height } = this.canvasSize, { x, y } = point;
+      return super.contains(point) || super.contains({ x: x - width, y }) || super.contains({ x: x - width, y: y - height }) || super.contains({ x, y: y - height });
     }
     intersects(range) {
       if (super.intersects(range)) {
@@ -19369,7 +15079,7 @@
     return Math.sqrt(warpDistances.x ** squarePower2 + warpDistances.y ** squarePower2);
   }
   var Linker = class extends ParticlesInteractorBase {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       super(container);
       this._setColor = (p1) => {
         if (!p1.options.links) {
@@ -19389,7 +15099,7 @@
         }
       };
       this._linkContainer = container;
-      this._engine = engine2;
+      this._engine = engine;
     }
     clear() {
     }
@@ -19451,9 +15161,9 @@
   };
 
   // node_modules/@tsparticles/interaction-particles-links/browser/interaction.js
-  async function loadLinksInteraction(engine2, refresh = true) {
-    await engine2.addInteractor("particlesLinks", async (container) => {
-      return Promise.resolve(new Linker(container, engine2));
+  async function loadLinksInteraction(engine, refresh = true) {
+    await engine.addInteractor("particlesLinks", async (container) => {
+      return Promise.resolve(new Linker(container, engine));
     }, refresh);
   }
 
@@ -19467,7 +15177,7 @@
   }
   function drawLinkLine(params) {
     let drawn = false;
-    const { begin, end, engine: engine2, maxDistance, context: context3, canvasSize, width, backgroundMask, colorLine, opacity, links } = params;
+    const { begin, end, engine, maxDistance, context: context3, canvasSize, width, backgroundMask, colorLine, opacity, links } = params;
     if (getDistance(begin, end) <= maxDistance) {
       drawLine(context3, begin, end);
       drawn = true;
@@ -19524,7 +15234,7 @@
     context3.strokeStyle = getStyleFromRgb(colorLine, opacity);
     const { shadow } = links;
     if (shadow.enable) {
-      const shadowColor = rangeColorToRgb(engine2, shadow.color);
+      const shadowColor = rangeColorToRgb(engine, shadow.color);
       if (shadowColor) {
         context3.shadowBlur = shadow.blur;
         context3.shadowColor = getStyleFromRgb(shadowColor);
@@ -19546,11 +15256,11 @@
     return ids.join("_");
   }
   function setLinkFrequency(particles, dictionary) {
-    const key2 = getLinkKey(particles.map((t) => t.id));
-    let res = dictionary.get(key2);
+    const key = getLinkKey(particles.map((t) => t.id));
+    let res = dictionary.get(key);
     if (res === void 0) {
       res = getRandom();
-      dictionary.set(key2, res);
+      dictionary.set(key, res);
     }
     return res;
   }
@@ -19562,7 +15272,7 @@
   var half11 = 0.5;
   var maxFrequency = 1;
   var LinkInstance = class {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       this._drawLinkLine = (p1, link) => {
         const p1LinksOptions = p1.options.links;
         if (!p1LinksOptions?.enable) {
@@ -19667,7 +15377,7 @@
         return setLinkFrequency([p1, p2, p3], this._freqs.triangles);
       };
       this._container = container;
-      this._engine = engine2;
+      this._engine = engine;
       this._freqs = {
         links: /* @__PURE__ */ new Map(),
         triangles: /* @__PURE__ */ new Map()
@@ -19707,9 +15417,9 @@
 
   // node_modules/@tsparticles/interaction-particles-links/browser/LinksPlugin.js
   var LinksPlugin = class {
-    constructor(engine2) {
+    constructor(engine) {
       this.id = "links";
-      this._engine = engine2;
+      this._engine = engine;
     }
     getPlugin(container) {
       return Promise.resolve(new LinkInstance(container, this._engine));
@@ -19722,16 +15432,16 @@
   };
 
   // node_modules/@tsparticles/interaction-particles-links/browser/plugin.js
-  async function loadLinksPlugin(engine2, refresh = true) {
-    const plugin = new LinksPlugin(engine2);
-    await engine2.addPlugin(plugin, refresh);
+  async function loadLinksPlugin(engine, refresh = true) {
+    const plugin = new LinksPlugin(engine);
+    await engine.addPlugin(plugin, refresh);
   }
 
   // node_modules/@tsparticles/interaction-particles-links/browser/index.js
-  async function loadParticlesLinksInteraction(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await loadLinksInteraction(engine2, refresh);
-    await loadLinksPlugin(engine2, refresh);
+  async function loadParticlesLinksInteraction(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await loadLinksInteraction(engine, refresh);
+    await loadLinksPlugin(engine, refresh);
   }
 
   // node_modules/@tsparticles/shape-polygon/browser/Utils.js
@@ -19824,18 +15534,18 @@
   };
 
   // node_modules/@tsparticles/shape-polygon/browser/index.js
-  async function loadGenericPolygonShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new PolygonDrawer(), refresh);
+  async function loadGenericPolygonShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new PolygonDrawer(), refresh);
   }
-  async function loadTriangleShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new TriangleDrawer(), refresh);
+  async function loadTriangleShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new TriangleDrawer(), refresh);
   }
-  async function loadPolygonShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await loadGenericPolygonShape(engine2, refresh);
-    await loadTriangleShape(engine2, refresh);
+  async function loadPolygonShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await loadGenericPolygonShape(engine, refresh);
+    await loadTriangleShape(engine, refresh);
   }
 
   // node_modules/@tsparticles/updater-rotate/browser/Options/Classes/RotateAnimation.js
@@ -19891,7 +15601,7 @@
 
   // node_modules/@tsparticles/updater-rotate/browser/RotateUpdater.js
   var double13 = 2;
-  var doublePI7 = Math.PI * double13;
+  var doublePI6 = Math.PI * double13;
   var identity6 = 1;
   var doublePIDeg = 360;
   var RotateUpdater = class {
@@ -19907,7 +15617,7 @@
         enable: rotateOptions.animation.enable,
         value: degToRad(getRangeValue(rotateOptions.value)),
         min: 0,
-        max: doublePI7
+        max: doublePI6
       };
       particle.pathRotation = rotateOptions.path;
       let rotateDirection = rotateOptions.direction;
@@ -19963,9 +15673,9 @@
   };
 
   // node_modules/@tsparticles/updater-rotate/browser/index.js
-  async function loadRotateUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("rotate", (container) => {
+  async function loadRotateUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("rotate", (container) => {
       return Promise.resolve(new RotateUpdater(container));
     }, refresh);
   }
@@ -19994,9 +15704,9 @@
   };
 
   // node_modules/@tsparticles/shape-square/browser/index.js
-  async function loadSquareShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new SquareDrawer(), refresh);
+  async function loadSquareShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new SquareDrawer(), refresh);
   }
 
   // node_modules/@tsparticles/shape-star/browser/Utils.js
@@ -20034,17 +15744,17 @@
   };
 
   // node_modules/@tsparticles/shape-star/browser/index.js
-  async function loadStarShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new StarDrawer(), refresh);
+  async function loadStarShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new StarDrawer(), refresh);
   }
 
   // node_modules/@tsparticles/updater-stroke-color/browser/StrokeColorUpdater.js
   var defaultOpacity4 = 1;
   var StrokeColorUpdater = class {
-    constructor(container, engine2) {
+    constructor(container, engine) {
       this._container = container;
-      this._engine = engine2;
+      this._engine = engine;
     }
     init(particle) {
       const container = this._container, options = particle.options;
@@ -20058,8 +15768,8 @@
       }
     }
     isEnabled(particle) {
-      const color2 = particle.strokeAnimation, { strokeColor } = particle;
-      return !particle.destroyed && !particle.spawning && !!color2 && (strokeColor?.h.value !== void 0 && strokeColor.h.enable || strokeColor?.s.value !== void 0 && strokeColor.s.enable || strokeColor?.l.value !== void 0 && strokeColor.l.enable);
+      const color = particle.strokeAnimation, { strokeColor } = particle;
+      return !particle.destroyed && !particle.spawning && !!color && (strokeColor?.h.value !== void 0 && strokeColor.h.enable || strokeColor?.s.value !== void 0 && strokeColor.s.enable || strokeColor?.l.value !== void 0 && strokeColor.l.enable);
     }
     update(particle, delta) {
       if (!this.isEnabled(particle)) {
@@ -20070,41 +15780,41 @@
   };
 
   // node_modules/@tsparticles/updater-stroke-color/browser/index.js
-  async function loadStrokeColorUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("strokeColor", (container) => {
-      return Promise.resolve(new StrokeColorUpdater(container, engine2));
+  async function loadStrokeColorUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("strokeColor", (container) => {
+      return Promise.resolve(new StrokeColorUpdater(container, engine));
     }, refresh);
   }
 
   // node_modules/@tsparticles/slim/browser/index.js
-  async function loadSlim(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await loadParallaxMover(engine2, false);
-    await loadExternalAttractInteraction(engine2, false);
-    await loadExternalBounceInteraction(engine2, false);
-    await loadExternalBubbleInteraction(engine2, false);
-    await loadExternalConnectInteraction(engine2, false);
-    await loadExternalGrabInteraction(engine2, false);
-    await loadExternalPauseInteraction(engine2, false);
-    await loadExternalPushInteraction(engine2, false);
-    await loadExternalRemoveInteraction(engine2, false);
-    await loadExternalRepulseInteraction(engine2, false);
-    await loadExternalSlowInteraction(engine2, false);
-    await loadParticlesAttractInteraction(engine2, false);
-    await loadParticlesCollisionsInteraction(engine2, false);
-    await loadParticlesLinksInteraction(engine2, false);
-    await loadEasingQuadPlugin(engine2, false);
-    await loadEmojiShape(engine2, false);
-    await loadImageShape(engine2, false);
-    await loadLineShape(engine2, false);
-    await loadPolygonShape(engine2, false);
-    await loadSquareShape(engine2, false);
-    await loadStarShape(engine2, false);
-    await loadLifeUpdater(engine2, false);
-    await loadRotateUpdater(engine2, false);
-    await loadStrokeColorUpdater(engine2, false);
-    await loadBasic(engine2, refresh);
+  async function loadSlim(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await loadParallaxMover(engine, false);
+    await loadExternalAttractInteraction(engine, false);
+    await loadExternalBounceInteraction(engine, false);
+    await loadExternalBubbleInteraction(engine, false);
+    await loadExternalConnectInteraction(engine, false);
+    await loadExternalGrabInteraction(engine, false);
+    await loadExternalPauseInteraction(engine, false);
+    await loadExternalPushInteraction(engine, false);
+    await loadExternalRemoveInteraction(engine, false);
+    await loadExternalRepulseInteraction(engine, false);
+    await loadExternalSlowInteraction(engine, false);
+    await loadParticlesAttractInteraction(engine, false);
+    await loadParticlesCollisionsInteraction(engine, false);
+    await loadParticlesLinksInteraction(engine, false);
+    await loadEasingQuadPlugin(engine, false);
+    await loadEmojiShape(engine, false);
+    await loadImageShape(engine, false);
+    await loadLineShape(engine, false);
+    await loadPolygonShape(engine, false);
+    await loadSquareShape(engine, false);
+    await loadStarShape(engine, false);
+    await loadLifeUpdater(engine, false);
+    await loadRotateUpdater(engine, false);
+    await loadStrokeColorUpdater(engine, false);
+    await loadBasic(engine, refresh);
   }
 
   // node_modules/@tsparticles/shape-text/browser/Utils.js
@@ -20181,9 +15891,9 @@
   };
 
   // node_modules/@tsparticles/shape-text/browser/index.js
-  async function loadTextShape(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addShape(new TextDrawer(), refresh);
+  async function loadTextShape(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addShape(new TextDrawer(), refresh);
   }
 
   // node_modules/@tsparticles/updater-tilt/browser/TiltDirection.js
@@ -20248,7 +15958,7 @@
   // node_modules/@tsparticles/updater-tilt/browser/TiltUpdater.js
   var identity7 = 1;
   var double16 = 2;
-  var doublePI8 = Math.PI * double16;
+  var doublePI7 = Math.PI * double16;
   var maxAngle4 = 360;
   var TiltUpdater = class {
     constructor(container) {
@@ -20272,7 +15982,7 @@
         sinDirection: getRandom() >= half ? identity7 : -identity7,
         cosDirection: getRandom() >= half ? identity7 : -identity7,
         min: 0,
-        max: doublePI8
+        max: doublePI7
       };
       let tiltDirection = tiltOptions.direction;
       if (tiltDirection === TiltDirection.random) {
@@ -20319,9 +16029,9 @@
   };
 
   // node_modules/@tsparticles/updater-tilt/browser/index.js
-  async function loadTiltUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("tilt", (container) => {
+  async function loadTiltUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("tilt", (container) => {
       return Promise.resolve(new TiltUpdater(container));
     }, refresh);
   }
@@ -20369,8 +16079,8 @@
 
   // node_modules/@tsparticles/updater-twinkle/browser/TwinkleUpdater.js
   var TwinkleUpdater = class {
-    constructor(engine2) {
-      this._engine = engine2;
+    constructor(engine) {
+      this._engine = engine;
     }
     getColorStyles(particle, context3, radius, opacity) {
       const pOptions = particle.options, twinkleOptions = pOptions.twinkle;
@@ -20406,10 +16116,10 @@
   };
 
   // node_modules/@tsparticles/updater-twinkle/browser/index.js
-  async function loadTwinkleUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("twinkle", () => {
-      return Promise.resolve(new TwinkleUpdater(engine2));
+  async function loadTwinkleUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("twinkle", () => {
+      return Promise.resolve(new TwinkleUpdater(engine));
     }, refresh);
   }
 
@@ -20467,17 +16177,17 @@
   // node_modules/@tsparticles/updater-wobble/browser/Utils.js
   var defaultDistance = 0;
   var double17 = 2;
-  var doublePI9 = Math.PI * double17;
+  var doublePI8 = Math.PI * double17;
   var distanceFactor = 60;
   function updateWobble(particle, delta) {
     const { wobble: wobbleOptions } = particle.options, { container, wobble } = particle;
     if (!wobbleOptions?.enable || !wobble) {
       return;
     }
-    const reduceFactor = container.retina.reduceFactor, angleSpeed = wobble.angleSpeed * delta.factor * reduceFactor, moveSpeed = wobble.moveSpeed * delta.factor * reduceFactor, distance = moveSpeed * (particle.retina.wobbleDistance ?? defaultDistance) / (millisecondsToSeconds / distanceFactor), max2 = doublePI9, { position } = particle;
+    const reduceFactor = container.retina.reduceFactor, angleSpeed = wobble.angleSpeed * delta.factor * reduceFactor, moveSpeed = wobble.moveSpeed * delta.factor * reduceFactor, distance = moveSpeed * (particle.retina.wobbleDistance ?? defaultDistance) / (millisecondsToSeconds / distanceFactor), max = doublePI8, { position } = particle;
     wobble.angle += angleSpeed;
-    if (wobble.angle > max2) {
-      wobble.angle -= max2;
+    if (wobble.angle > max) {
+      wobble.angle -= max;
     }
     position.x += distance * Math.cos(wobble.angle);
     position.y += distance * Math.abs(Math.sin(wobble.angle));
@@ -20485,7 +16195,7 @@
 
   // node_modules/@tsparticles/updater-wobble/browser/WobbleUpdater.js
   var double18 = 2;
-  var doublePI10 = Math.PI * double18;
+  var doublePI9 = Math.PI * double18;
   var maxAngle5 = 360;
   var moveSpeedFactor2 = 10;
   var defaultDistance2 = 0;
@@ -20497,7 +16207,7 @@
       const wobbleOpt = particle.options.wobble;
       if (wobbleOpt?.enable) {
         particle.wobble = {
-          angle: getRandom() * doublePI10,
+          angle: getRandom() * doublePI9,
           angleSpeed: getRangeValue(wobbleOpt.speed.angle) / maxAngle5,
           moveSpeed: getRangeValue(wobbleOpt.speed.move) / moveSpeedFactor2
         };
@@ -20530,28 +16240,28 @@
   };
 
   // node_modules/@tsparticles/updater-wobble/browser/index.js
-  async function loadWobbleUpdater(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await engine2.addParticleUpdater("wobble", (container) => {
+  async function loadWobbleUpdater(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await engine.addParticleUpdater("wobble", (container) => {
       return Promise.resolve(new WobbleUpdater(container));
     }, refresh);
   }
 
   // node_modules/tsparticles/browser/index.js
-  async function loadFull(engine2, refresh = true) {
-    engine2.checkVersion("3.9.1");
-    await loadDestroyUpdater(engine2, false);
-    await loadRollUpdater(engine2, false);
-    await loadTiltUpdater(engine2, false);
-    await loadTwinkleUpdater(engine2, false);
-    await loadWobbleUpdater(engine2, false);
-    await loadTextShape(engine2, false);
-    await loadExternalTrailInteraction(engine2, false);
-    await loadAbsorbersPlugin(engine2, false);
-    await loadEmittersPlugin(engine2, false);
-    await loadEmittersShapeCircle(engine2, false);
-    await loadEmittersShapeSquare(engine2, false);
-    await loadSlim(engine2, refresh);
+  async function loadFull(engine, refresh = true) {
+    engine.checkVersion("3.9.1");
+    await loadDestroyUpdater(engine, false);
+    await loadRollUpdater(engine, false);
+    await loadTiltUpdater(engine, false);
+    await loadTwinkleUpdater(engine, false);
+    await loadWobbleUpdater(engine, false);
+    await loadTextShape(engine, false);
+    await loadExternalTrailInteraction(engine, false);
+    await loadAbsorbersPlugin(engine, false);
+    await loadEmittersPlugin(engine, false);
+    await loadEmittersShapeCircle(engine, false);
+    await loadEmittersShapeSquare(engine, false);
+    await loadSlim(engine, refresh);
   }
 
   // src/ts/background/particles.ts
@@ -20690,185 +16400,6 @@
     };
   }
 
-  // src/ts/projects/projectShowcaseAnimations.ts
-  function applyVisualSelection(slideNodes, selectedIndex) {
-    slideNodes.forEach((slide, index) => {
-      const offset = index - selectedIndex;
-      slide.classList.toggle("is-selected", index === selectedIndex);
-      slide.classList.toggle("is-before", offset < 0);
-      slide.classList.toggle("is-after", offset > 0);
-      slide.classList.toggle("is-neighbor", Math.abs(offset) === 1);
-      slide.classList.toggle("is-far", Math.abs(offset) > 1);
-    });
-  }
-  function commitContentSelection(detailNodes, selectedIndex, { prefersReducedMotion }) {
-    detailNodes.forEach((detail, index) => {
-      detail.classList.toggle("is-selected", index === selectedIndex);
-    });
-    const activeDetail = detailNodes[selectedIndex];
-    if (!activeDetail || prefersReducedMotion) return;
-    const detailParts = activeDetail.querySelectorAll(
-      "h3, .case-points > p, .chips, .links"
-    );
-    gsapWithCSS.killTweensOf([activeDetail, ...detailParts]);
-    gsapWithCSS.fromTo(
-      detailParts,
-      {
-        opacity: 0,
-        y: 14
-      },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.42,
-        stagger: 0.045,
-        ease: "power3.out",
-        clearProps: "opacity,transform"
-      }
-    );
-  }
-  function applyProjectShowcaseMotion(slideNodes, selectedIndex) {
-    slideNodes.forEach((slideNode, index) => {
-      const imageNode = slideNode.querySelector("img");
-      const titleNode = slideNode.querySelector(".project-stage-caption");
-      if (!imageNode || !titleNode) return;
-      const offset = index - selectedIndex;
-      const abs2 = Math.abs(offset);
-      const shiftX = 0;
-      const scale2 = offset === 0 ? 1.1 : abs2 === 1 ? 0.94 : 0.88;
-      const opacity = offset === 0 ? 1 : abs2 === 1 ? 0.72 : 0.56;
-      const blur = offset === 0 ? 0 : abs2 === 1 ? 0.1 : 0.24;
-      const parallaxX = 0;
-      const imageScale = offset === 0 ? 1.05 : 1;
-      const captionY = offset === 0 ? 0 : 5;
-      slideNode.style.setProperty("--slide-shift-x", `${shiftX}px`);
-      slideNode.style.setProperty("--slide-scale", scale2.toFixed(3));
-      slideNode.style.setProperty("--slide-opacity", opacity.toFixed(3));
-      slideNode.style.setProperty("--slide-blur", `${blur.toFixed(2)}px`);
-      slideNode.style.setProperty("--shot-parallax-x", `${parallaxX}px`);
-      imageNode.style.setProperty("--shot-image-scale", imageScale.toFixed(3));
-      titleNode.style.setProperty("--caption-offset-y", `${captionY}px`);
-    });
-  }
-  function bindActiveHover(slideNodes, { prefersReducedMotion }) {
-    const handleMove = (event) => {
-      if (prefersReducedMotion) return;
-      const slide = event.currentTarget;
-      if (!slide.classList.contains("is-selected")) return;
-      const shot = slide.querySelector(".project-shot-stage");
-      const caption = slide.querySelector(".project-stage-caption");
-      if (!shot || !caption) return;
-      const rect = slide.getBoundingClientRect();
-      const offsetX = ((event.clientX - rect.left) / rect.width - 0.5) * 10;
-      const offsetY = ((event.clientY - rect.top) / rect.height - 0.5) * 8;
-      gsapWithCSS.to(shot, {
-        x: offsetX,
-        y: offsetY,
-        duration: 0.32,
-        ease: "power3.out",
-        overwrite: "auto"
-      });
-      gsapWithCSS.to(caption, {
-        x: offsetX * 0.42,
-        y: offsetY * 0.42,
-        duration: 0.32,
-        ease: "power3.out",
-        overwrite: "auto"
-      });
-    };
-    const reset = (slide) => {
-      const shot = slide.querySelector(".project-shot-stage");
-      const caption = slide.querySelector(".project-stage-caption");
-      if (!shot || !caption) return;
-      gsapWithCSS.to([shot, caption], {
-        x: 0,
-        y: 0,
-        duration: 0.5,
-        ease: "power3.out",
-        overwrite: "auto",
-        clearProps: "x,y"
-      });
-    };
-    slideNodes.forEach((slide) => {
-      slide.addEventListener("pointermove", handleMove);
-      slide.addEventListener("pointerleave", () => {
-        reset(slide);
-      });
-    });
-  }
-
-  // src/ts/projects/projectShowcase.ts
-  function initProjectShowcase(root, { prefersReducedMotion }) {
-    const compactView = window.matchMedia(
-      "(max-width: 1280px), (max-height: 900px)"
-    ).matches;
-    const slideNodes = Array.from(
-      root.querySelectorAll("[data-project-slide]")
-    );
-    const detailNodes = Array.from(
-      root.parentElement?.querySelectorAll("[data-project-detail]") ?? []
-    );
-    if (slideNodes.length === 0) return;
-    let selectedIndex = slideNodes.findIndex(
-      (slide) => slide.classList.contains("is-selected")
-    );
-    if (selectedIndex < 0) {
-      selectedIndex = 0;
-    }
-    let stageNavigationUnlockedAt = performance.now();
-    const commitState = (index) => {
-      applyVisualSelection(slideNodes, index);
-      commitContentSelection(detailNodes, index, { prefersReducedMotion });
-      applyProjectShowcaseMotion(slideNodes, index);
-      selectedIndex = index;
-      stageNavigationUnlockedAt = performance.now();
-    };
-    const selectProject = (index) => {
-      if (index === selectedIndex) return;
-      commitState(index);
-    };
-    bindActiveHover(slideNodes, { prefersReducedMotion });
-    commitState(selectedIndex);
-    if (compactView) {
-      return;
-    }
-    slideNodes.forEach((slide, index) => {
-      const stageLink = slide.querySelector(".project-shot-stage");
-      slide.addEventListener("click", () => {
-        selectProject(index);
-      });
-      slide.addEventListener("focusin", () => {
-        selectProject(index);
-      });
-      stageLink?.addEventListener("click", (event) => {
-        const justSelected = performance.now() - stageNavigationUnlockedAt < 380;
-        if (!slide.classList.contains("is-selected") || justSelected || index !== selectedIndex) {
-          event.preventDefault();
-          event.stopPropagation();
-          selectProject(index);
-        }
-      });
-    });
-    root.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        selectProject(Math.max(0, selectedIndex - 1));
-      }
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        selectProject(Math.min(slideNodes.length - 1, selectedIndex + 1));
-      }
-      if (event.key === "Home") {
-        event.preventDefault();
-        selectProject(0);
-      }
-      if (event.key === "End") {
-        event.preventDefault();
-        selectProject(slideNodes.length - 1);
-      }
-    });
-  }
-
   // src/ts/theme.ts
   var STORAGE_KEY = "portfolio-theme";
   var THEMES = ["dark", "light"];
@@ -20933,23 +16464,13 @@
     return initialTheme;
   }
 
-  // src/ts/site.ts
+  // src/ts/project.ts
   (() => {
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
     const supportsCursorGlow = !prefersReducedMotion && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    const navToggle = document.querySelector(".nav-toggle");
-    const nav = document.querySelector(".nav");
-    const brand = document.querySelector(".brand");
     const appBackground = document.querySelector("[data-app-background]");
-    const progress2 = document.querySelector(".scroll-progress span");
-    const header = document.querySelector(".site-header");
-    const projectShowcase = document.querySelector("[data-project-showcase]");
-    const projectSlides = document.querySelectorAll(
-      "[data-project-slide]"
-    );
-    const hero = document.querySelector(".hero");
     let backgroundController = null;
     const mountBackground = async () => {
       backgroundController?.destroy();
@@ -20982,246 +16503,37 @@
         glow.classList.remove("is-visible");
       });
     }
-    if (projectShowcase && projectSlides.length > 0) {
-      void initProjectShowcase(projectShowcase, { prefersReducedMotion });
-    }
-    if (navToggle && nav) {
-      navToggle.addEventListener("click", () => {
-        const isOpen = nav.classList.toggle("open");
-        navToggle.setAttribute("aria-expanded", String(isOpen));
-      });
-      nav.querySelectorAll("a").forEach((link) => {
-        link.addEventListener("click", () => {
-          nav.classList.remove("open");
-          navToggle.setAttribute("aria-expanded", "false");
-        });
-      });
-    }
-    if (progress2) {
-      scroll((value) => {
-        progress2.style.transform = "scaleX(" + value.toFixed(3) + ")";
-      });
-    }
-    if (brand && !prefersReducedMotion) {
-      brand.addEventListener("click", () => {
-        gsapWithCSS.killTweensOf(brand);
-        gsapWithCSS.fromTo(
-          brand,
-          { scale: 1 },
-          {
-            scale: 1.08,
-            duration: 0.24,
-            ease: "power2.out",
-            yoyo: true,
-            repeat: 1,
-            overwrite: true,
-            clearProps: "transform"
-          }
-        );
-      });
-    }
-    if (hero && !prefersReducedMotion) {
-      const heroTargets = hero.querySelectorAll(
-        ".hero-orb, .hero-identity-copy, .hero-signal-grid, .hero-stat, .hero-intro, h1, .hero-role, .hero-snippet, .hero-actions, .hero-scroll"
-      );
-      gsapWithCSS.set(heroTargets, {
-        opacity: 0,
-        y: 26,
-        willChange: "transform,opacity"
-      });
-      gsapWithCSS.set(hero.querySelector(".hero-orb"), {
-        scale: 0.94,
-        y: 18
-      });
-      gsapWithCSS.timeline({ defaults: { ease: "power3.out" } }).to(hero.querySelector(".hero-orb"), {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.8
-      }).to(
-        hero.querySelectorAll(".hero-identity-copy, .hero-signal-grid, .hero-stat"),
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.62,
-          stagger: 0.08
-        },
-        "-=0.42"
-      ).to(
-        hero.querySelectorAll(".hero-intro, h1, .hero-role, .hero-snippet, .hero-actions, .hero-scroll"),
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.66,
-          stagger: 0.08
-        },
-        "-=0.48"
-      );
-    }
-    const titleSplitters = /* @__PURE__ */ new WeakMap();
-    const sectionTitles = document.querySelectorAll(".section-head h2");
-    const compactView = window.matchMedia("(max-width: 860px)").matches;
-    const shortViewport = window.matchMedia("(max-height: 900px)").matches;
-    sectionTitles.forEach((title) => {
-      if (title.dataset.splitDone === "true") return;
-      const splitter = splitText(title, {
-        words: { class: "title-word" },
-        chars: false,
-        lines: false
-      });
-      titleSplitters.set(title, splitter.words);
-      title.dataset.splitDone = "true";
-    });
-    function animateSectionTitle(sectionHead) {
-      if (sectionHead.dataset.titleAnimated === "true") return;
-      const title = sectionHead.querySelector("h2");
-      const words = title ? titleSplitters.get(title) : null;
-      if (!title || !words || words.length === 0) return;
-      sectionHead.dataset.titleAnimated = "true";
-      if (prefersReducedMotion) {
-        words.forEach((word) => {
-          word.style.opacity = "1";
-          word.style.transform = "none";
-        });
-        return;
-      }
-      animate(words, {
-        translateY: [10, 0],
-        opacity: [0, 1],
-        delay: stagger(58),
-        duration: 420,
-        ease: "outQuad"
-      });
-    }
     const revealTargets = document.querySelectorAll(
-      ".card, .panel, .project-roulette, .role-card, .section-head:not(.project-head)"
+      ".hero, .grid, .decisions, .links"
     );
-    revealTargets.forEach((el, idx) => {
-      el.classList.add("reveal");
-      el.classList.add("reveal-init");
-      const isProjectBlock = el.classList.contains("project-roulette");
-      el.style.setProperty("--reveal-delay", isProjectBlock ? "0ms" : idx % 6 * 70 + "ms");
-      inView(
-        el,
-        (element) => {
-          const target = element;
-          target.classList.add("in");
-          if (target.classList.contains("section-head")) {
-            animateSectionTitle(target);
+    if (prefersReducedMotion || !("IntersectionObserver" in window)) {
+      revealTargets.forEach((target) => target.classList.add("in"));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const target = entry.target;
+          if (entry.isIntersecting) {
+            target.classList.add("in");
+            observer.unobserve(target);
           }
-          if (target.classList.contains("project-roulette")) {
-            const projectHead = target.querySelector(".project-head");
-            if (projectHead) {
-              animateSectionTitle(projectHead);
-            }
-          }
-          if (target.classList.contains("project-roulette")) {
-            return;
-          }
-          if (prefersReducedMotion) return;
-          return () => {
-            target.classList.remove("in");
-          };
-        },
-        isProjectBlock ? {
-          amount: compactView || shortViewport ? 0.1 : 0.24,
-          margin: compactView || shortViewport ? "0px 0px -2% 0px" : "0px 0px -8% 0px"
-        } : {
-          amount: compactView ? 0.12 : 0.22,
-          margin: compactView ? "0px 0px -4% 0px" : "0px 0px -10% 0px"
-        }
-      );
+        });
+      },
+      {
+        threshold: 0.22,
+        rootMargin: "0px 0px -10% 0px"
+      }
+    );
+    revealTargets.forEach((target, index) => {
+      target.classList.add("reveal");
+      target.classList.add("reveal-init");
+      target.style.setProperty("--reveal-delay", `${index * 70}ms`);
+      observer.observe(target);
     });
   })();
 })();
 /*! Bundled license information:
-
-animejs/dist/modules/core/consts.js:
-animejs/dist/modules/core/globals.js:
-animejs/dist/modules/core/helpers.js:
-animejs/dist/modules/core/transforms.js:
-animejs/dist/modules/core/colors.js:
-animejs/dist/modules/core/values.js:
-animejs/dist/modules/core/render.js:
-animejs/dist/modules/core/styles.js:
-animejs/dist/modules/core/clock.js:
-animejs/dist/modules/core/targets.js:
-animejs/dist/modules/core/units.js:
-  (**
-   * Anime.js - core - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/animation/additive.js:
-animejs/dist/modules/animation/composition.js:
-animejs/dist/modules/animation/animation.js:
-  (**
-   * Anime.js - animation - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/engine/engine.js:
-  (**
-   * Anime.js - engine - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/timer/timer.js:
-  (**
-   * Anime.js - timer - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/easings/none.js:
-animejs/dist/modules/easings/eases/parser.js:
-  (**
-   * Anime.js - easings - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/timeline/position.js:
-  (**
-   * Anime.js - timeline - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/utils/time.js:
-animejs/dist/modules/utils/random.js:
-animejs/dist/modules/utils/stagger.js:
-  (**
-   * Anime.js - utils - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/text/split.js:
-  (**
-   * Anime.js - text - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
-
-animejs/dist/modules/index.js:
-  (**
-   * Anime.js - ESM
-   * @version v4.3.6
-   * @license MIT
-   * @copyright 2026 - Julian Garnier
-   *)
 
 gsap/gsap-core.js:
   (*!

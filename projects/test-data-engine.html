@@ -9,12 +9,23 @@
       type="image/svg+xml"
       href="../assets/favicon/favicon.svg"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="../assets/css/project.css" />
   </head>
-  <body>
+  <body data-theme="dark">
+    <div class="app-background" aria-hidden="true" data-app-background>
+      <div class="app-background__particles" id="background-particles" data-particle-layer></div>
+      <div class="app-background__grain"></div>
+    </div>
     <main class="wrap">
       <div class="topbar">
         <a class="btn-back" href="../index.html#projects">Back to Projects</a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme"></button>
       </div>
       <section class="hero">
         <h1>Test Data Engine</h1>
@@ -103,5 +114,6 @@
         >
       </div>
     </main>
+    <script src="../assets/js/project.js"></script>
   </body>
 </html>

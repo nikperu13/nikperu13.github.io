@@ -1,6 +1,9 @@
 import { animate as animeAnimate, splitText, stagger } from "animejs";
 import gsap from "gsap";
 import { inView, scroll } from "motion";
+import { initBackground } from "./background/background";
+import { initProjectShowcase } from "./projects/projectShowcase";
+import { initThemeToggle } from "./theme";
 
 /**
  * Main client-side behavior for the portfolio landing page.
@@ -18,24 +21,71 @@ import { inView, scroll } from "motion";
  * The goal is to keep interactions declarative from the markup side while
  * avoiding framework overhead for a mostly static site.
  */
-type CounterConfig = {
-  from: number;
-  to: number;
-  format: (value: number) => string;
-};
-
 (() => {
   // Reduced-motion users should still get functional UI without pointer/scroll
   // driven animation flourishes.
   const prefersReducedMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)",
   ).matches;
+  const supportsCursorGlow =
+    !prefersReducedMotion &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   const navToggle = document.querySelector<HTMLButtonElement>(".nav-toggle");
   const nav = document.querySelector<HTMLElement>(".nav");
   const brand = document.querySelector<HTMLElement>(".brand");
+  const appBackground =
+    document.querySelector<HTMLElement>("[data-app-background]");
   const progress = document.querySelector<HTMLElement>(".scroll-progress span");
   const header = document.querySelector<HTMLElement>(".site-header");
+  const projectShowcase =
+    document.querySelector<HTMLElement>("[data-project-showcase]");
+  const projectSlides = document.querySelectorAll<HTMLElement>(
+    "[data-project-slide]",
+  );
   const hero = document.querySelector<HTMLElement>(".hero");
+
+  let backgroundController: { destroy: () => void } | null = null;
+  const mountBackground = async () => {
+    backgroundController?.destroy();
+    backgroundController = await initBackground(appBackground, prefersReducedMotion);
+  };
+
+  initThemeToggle({
+    onChange: () => {
+      void mountBackground();
+    },
+  });
+
+  void mountBackground();
+
+  if (supportsCursorGlow) {
+    const glow = document.createElement("div");
+    glow.className = "cursor-glow";
+    document.body.appendChild(glow);
+
+    const moveGlowX = gsap.quickTo(glow, "x", {
+      duration: 0.6,
+      ease: "power3.out",
+    });
+    const moveGlowY = gsap.quickTo(glow, "y", {
+      duration: 0.6,
+      ease: "power3.out",
+    });
+
+    window.addEventListener("pointermove", (event) => {
+      glow.classList.add("is-visible");
+      moveGlowX(event.clientX);
+      moveGlowY(event.clientY);
+    });
+
+    window.addEventListener("pointerleave", () => {
+      glow.classList.remove("is-visible");
+    });
+  }
+
+  if (projectShowcase && projectSlides.length > 0) {
+    void initProjectShowcase(projectShowcase, { prefersReducedMotion });
+  }
 
   if (navToggle && nav) {
     navToggle.addEventListener("click", () => {
@@ -50,71 +100,6 @@ type CounterConfig = {
       });
     });
   }
-
-  const sectionLinks = Array.from(
-    document.querySelectorAll<HTMLAnchorElement>(".nav a[data-section]"),
-  );
-  const sections = sectionLinks
-    .map((link) => {
-      const id = link.getAttribute("data-section");
-      return id ? document.getElementById(id) : null;
-    })
-    .filter(
-      (section): section is HTMLElement => section instanceof HTMLElement,
-    );
-
-  /**
-   * Marks the nav item for the section currently closest to the user's reading
-   * position rather than relying on the very top edge of the viewport.
-   */
-  function setActiveLink(): void {
-    const headerHeight = header ? header.offsetHeight : 0;
-    const marker = Math.max(
-      headerHeight + 24,
-      Math.round(window.innerHeight * 0.36),
-    );
-    let activeId = "";
-
-    sections.forEach((section) => {
-      const rect = section.getBoundingClientRect();
-      if (rect.top <= marker && rect.bottom > marker) {
-        activeId = section.id;
-      }
-    });
-
-    if (!activeId && sections.length > 0) {
-      activeId = sections[sections.length - 1].id;
-      for (let i = 0; i < sections.length; i += 1) {
-        if (sections[i].getBoundingClientRect().top > marker) {
-          activeId = i === 0 ? sections[0].id : sections[i - 1].id;
-          break;
-        }
-      }
-    }
-
-    sectionLinks.forEach((link) => {
-      const isActive = link.getAttribute("data-section") === activeId;
-      link.classList.toggle("active", isActive);
-    });
-  }
-
-  let ticking = false;
-
-  /**
-   * Scroll events can fire very frequently. Batch the nav recalculation into a
-   * single animation frame so the DOM work stays predictable.
-   */
-  function onScroll(): void {
-    if (ticking) return;
-    ticking = true;
-    window.requestAnimationFrame(() => {
-      setActiveLink();
-      ticking = false;
-    });
-  }
-
-  setActiveLink();
-  window.addEventListener("scroll", onScroll, { passive: true });
 
   if (progress) {
     // `motion.scroll()` gives a normalized 0..1 value for the full page.
@@ -144,9 +129,56 @@ type CounterConfig = {
     });
   }
 
+  if (hero && !prefersReducedMotion) {
+    const heroTargets = hero.querySelectorAll<HTMLElement>(
+      ".hero-orb, .hero-identity-copy, .hero-signal-grid, .hero-stat, .hero-intro, h1, .hero-role, .hero-snippet, .hero-actions, .hero-scroll",
+    );
+
+    gsap.set(heroTargets, {
+      opacity: 0,
+      y: 26,
+      willChange: "transform,opacity",
+    });
+
+    gsap.set(hero.querySelector(".hero-orb"), {
+      scale: 0.94,
+      y: 18,
+    });
+
+    gsap.timeline({ defaults: { ease: "power3.out" } })
+      .to(hero.querySelector(".hero-orb"), {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.8,
+      })
+      .to(
+        hero.querySelectorAll<HTMLElement>(".hero-identity-copy, .hero-signal-grid, .hero-stat"),
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.62,
+          stagger: 0.08,
+        },
+        "-=0.42",
+      )
+      .to(
+        hero.querySelectorAll<HTMLElement>(".hero-intro, h1, .hero-role, .hero-snippet, .hero-actions, .hero-scroll"),
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.66,
+          stagger: 0.08,
+        },
+        "-=0.48",
+      );
+  }
+
   const titleSplitters = new WeakMap<HTMLElement, HTMLElement[]>();
   const sectionTitles =
     document.querySelectorAll<HTMLElement>(".section-head h2");
+  const compactView = window.matchMedia("(max-width: 860px)").matches;
+  const shortViewport = window.matchMedia("(max-height: 900px)").matches;
 
   /**
    * Convert section titles into addressable word nodes once so reveal
@@ -188,195 +220,60 @@ type CounterConfig = {
     });
   }
 
-  const impactValues = document.querySelectorAll<HTMLElement>(".impact-value");
-
-  /**
-   * Supported metric formats are intentionally narrow because the page uses a
-   * small set of copy patterns today.
-   *
-   * Examples:
-   * - `99%`
-   * - `~80%`
-   * - `6-7x`
-   * - `7x`
-   */
-  function parseCounterText(text: string): CounterConfig | null {
-    const clean = text.replace(/\s+/g, "");
-    let match = clean.match(/^~?(\d+)%$/);
-    if (match) {
-      return {
-        from: 0,
-        to: Number(match[1]),
-        format: (value) => (clean.startsWith("~") ? "~" : "") + value + "%",
-      };
-    }
-
-    match = clean.match(/^(\d+)-(\d+)x$/i);
-    if (match) {
-      const start = Number(match[1]);
-      const end = Number(match[2]);
-      return {
-        from: start,
-        to: end,
-        format: (value) => start + "-" + value + "x",
-      };
-    }
-
-    match = clean.match(/^(\d+)x$/i);
-    if (match) {
-      return {
-        from: 0,
-        to: Number(match[1]),
-        format: (value) => value + "x",
-      };
-    }
-
-    return null;
-  }
-
-  function animateCounter(el: HTMLElement, config: CounterConfig | null): void {
-    if (!config || el.dataset.counted === "true") return;
-
-    // Tween a plain object, then project the rounded value back into the DOM.
-    const state = { value: config.from };
-    el.dataset.counted = "true";
-    el.classList.add("counting");
-
-    gsap.to(state, {
-      value: config.to,
-      duration: 0.98,
-      ease: "power3.out",
-      overwrite: true,
-      onUpdate: () => {
-        el.textContent = config.format(Math.round(state.value));
-      },
-      onComplete: () => {
-        el.textContent = config.format(config.to);
-        el.classList.remove("counting");
-      },
-    });
-  }
-
-  const spotlightCards =
-    document.querySelectorAll<HTMLElement>(".project-card");
-
-  if (!prefersReducedMotion) {
-    // Project cards expose CSS custom properties used by the spotlight overlay.
-    spotlightCards.forEach((card) => {
-      card.addEventListener("pointermove", (event) => {
-        const rect = card.getBoundingClientRect();
-        const x = ((event.clientX - rect.left) / rect.width) * 100;
-        const y = ((event.clientY - rect.top) / rect.height) * 100;
-        gsap.to(card, {
-          "--spot-x": x.toFixed(2) + "%",
-          "--spot-y": y.toFixed(2) + "%",
-          duration: 0.22,
-          ease: "power2.out",
-          overwrite: "auto",
-        });
-      });
-      card.addEventListener("pointerenter", () => {
-        card.classList.add("spotlight-on");
-      });
-      card.addEventListener("pointerleave", () => {
-        card.classList.remove("spotlight-on");
-      });
-    });
-
-    if (hero) {
-      // The hero glow layers read these custom properties from CSS.
-      hero.addEventListener("pointermove", (event) => {
-        const rect = hero.getBoundingClientRect();
-        const nx = (event.clientX - rect.left) / rect.width - 0.5;
-        const ny = (event.clientY - rect.top) / rect.height - 0.5;
-        gsap.to(hero, {
-          "--hero-shift-x": (nx * 18).toFixed(1) + "px",
-          "--hero-shift-y": (ny * 16).toFixed(1) + "px",
-          duration: 0.3,
-          ease: "power2.out",
-          overwrite: "auto",
-        });
-      });
-      hero.addEventListener("pointerleave", () => {
-        gsap.to(hero, {
-          "--hero-shift-x": "0px",
-          "--hero-shift-y": "0px",
-          duration: 0.35,
-          ease: "power2.out",
-          overwrite: "auto",
-        });
-      });
-    }
-  }
-
   const revealTargets = document.querySelectorAll<HTMLElement>(
-    ".card, .panel, .project-card, .role-card, .contact-card, .section-head",
+    ".card, .panel, .project-roulette, .role-card, .section-head:not(.project-head)",
   );
 
   /**
-   * Shared "reveal once" behavior:
-   * - initial hidden state comes from CSS via `.reveal-pending`
-   * - `motion.inView()` removes the pending state once visible
-   * - section headers additionally trigger word-stagger animation
+   * Shared viewport reveal behavior:
+   * - initial hidden state is applied only when JS is running
+   * - `motion.inView()` toggles `.in` on enter/leave for a softer flow effect
+   * - section headers still animate their title words once on first entry
    */
   revealTargets.forEach((el, idx) => {
     el.classList.add("reveal");
-    el.classList.add("reveal-pending");
-    el.style.setProperty("--reveal-delay", (idx % 6) * 50 + "ms");
+    el.classList.add("reveal-init");
+    const isProjectBlock = el.classList.contains("project-roulette");
+    el.style.setProperty("--reveal-delay", isProjectBlock ? "0ms" : (idx % 6) * 70 + "ms");
 
     inView(
       el,
       (element) => {
         const target = element as HTMLElement;
         target.classList.add("in");
-        target.classList.remove("reveal-pending");
         if (target.classList.contains("section-head")) {
           animateSectionTitle(target);
         }
-      },
-      { amount: 0.15, margin: "0px 0px -8% 0px" },
-    );
-  });
-
-  impactValues.forEach((value) => {
-    const tile = value.closest<HTMLElement>(".impact-tile");
-    if (!tile) {
-      animateCounter(value, parseCounterText(value.textContent ?? ""));
-      return;
-    }
-
-    tile.classList.add("reveal");
-    tile.classList.add("reveal-pending");
-
-    inView(
-      tile,
-      (element) => {
-        const target = element as HTMLElement;
-        target.classList.add("in");
-        target.classList.remove("reveal-pending");
-        animateCounter(value, parseCounterText(value.textContent ?? ""));
-      },
-      { amount: 0.2, margin: "0px 0px -8% 0px" },
-    );
-  });
-
-  window.setTimeout(() => {
-    // Fail-safe: never leave content hidden if an observer callback is missed.
-    revealTargets.forEach((el) => {
-      if (el.classList.contains("reveal-pending")) {
-        el.classList.remove("reveal-pending");
-        if (el.classList.contains("section-head")) {
-          animateSectionTitle(el);
+        if (target.classList.contains("project-roulette")) {
+          const projectHead = target.querySelector<HTMLElement>(".project-head");
+          if (projectHead) {
+            animateSectionTitle(projectHead);
+          }
         }
-      }
-    });
 
-    impactValues.forEach((value) => {
-      const tile = value.closest<HTMLElement>(".impact-tile");
-      if (tile && tile.classList.contains("reveal-pending")) {
-        tile.classList.remove("reveal-pending");
-        animateCounter(value, parseCounterText(value.textContent ?? ""));
-      }
-    });
-  }, 1400);
+        if (target.classList.contains("project-roulette")) {
+          return;
+        }
+
+        if (prefersReducedMotion) return;
+
+        return () => {
+          target.classList.remove("in");
+        };
+      },
+      isProjectBlock
+        ? {
+            amount: compactView || shortViewport ? 0.1 : 0.24,
+            margin:
+              compactView || shortViewport
+                ? "0px 0px -2% 0px"
+                : "0px 0px -8% 0px",
+          }
+        : {
+            amount: compactView ? 0.12 : 0.22,
+            margin: compactView ? "0px 0px -4% 0px" : "0px 0px -10% 0px",
+          },
+    );
+  });
+
 })();

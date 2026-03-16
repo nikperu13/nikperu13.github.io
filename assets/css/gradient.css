@@ -1,0 +1,87 @@
+body {
+  background:
+    radial-gradient(150% 115% at 50% -20%, rgba(255, 255, 255, 0.008), transparent 52%),
+    linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 52%, var(--bg-2) 100%);
+}
+
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.app-background::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(150% 115% at 50% 0%, rgba(255, 255, 255, 0.01), transparent 62%),
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.014) 0%, rgba(var(--accent-rgb), 0.006) 26%, transparent 52%),
+    linear-gradient(225deg, rgba(var(--accent-warm-rgb), 0.012) 0%, rgba(var(--accent-warm-rgb), 0.005) 22%, transparent 48%),
+    linear-gradient(180deg, rgba(6, 9, 8, 0.012), rgba(6, 9, 8, 0.012) 40%, rgba(6, 9, 8, 0.024) 76%, rgba(6, 9, 8, 0.032) 100%);
+}
+
+.app-background__particles,
+.app-background__grain {
+  position: absolute;
+  inset: 0;
+}
+
+.app-background__particles {
+  opacity: 0.52;
+}
+
+body[data-theme="dark"] .app-background__particles {
+  opacity: 0.62;
+}
+
+body[data-theme="light"] .app-background__particles {
+  opacity: 0.72;
+}
+
+.app-background__particles canvas {
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 1;
+}
+
+.app-background__grain {
+  opacity: 0.016;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.05) 0.7px, transparent 0.8px),
+    radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.032) 0.7px, transparent 0.8px),
+    radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.036) 0.7px, transparent 0.8px);
+  background-size: 170px 170px, 220px 220px, 200px 200px;
+  mask-image: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.42), transparent 94%);
+}
+
+.site-header,
+main,
+.site-footer {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 860px) {
+  .app-background__particles {
+    opacity: 0.46;
+  }
+
+  body[data-theme="dark"] .app-background__particles {
+    opacity: 0.56;
+  }
+
+  body[data-theme="light"] .app-background__particles {
+    opacity: 0.66;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-background__particles,
+  .app-background__grain {
+    opacity: 0.22;
+  }
+}

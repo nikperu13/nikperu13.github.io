@@ -67,7 +67,7 @@
                   <p class="hero-card-title">Automation Architecture</p>
                 </div>
                 <div class="hero-signal-grid" aria-label="Core strengths">
-                  <span>Deterministic Systems</span><span>Test Isolation</span><span>Parallel Execution</span><span>Domain Modeling</span>
+                  {{HERO_PILLS}}
                 </div>
                 <div class="hero-stat">
                   <strong>5</strong>
@@ -81,7 +81,7 @@
                 <p class="hero-role">Software Development Engineer in Test</p>
                 <p class="hero-snippet"><strong>Senior SDET with 5 years of experience</strong> focused on parallel automation, stable test architecture, and faster regression across integration-heavy systems.</p>
                 <div class="hero-actions">
-                  <a class="btn btn-muted" href="./resume/Nicolas_Garcia_Rosell_Resume_SDET.docx" download="Nicolas_Garcia_Rosell_Resume_SDET">Resume</a>
+                  <a class="btn btn-muted" href="{{RESUME_HREF}}" download="Nicolas_Garcia_Rosell_Resume_SDET">Resume</a>
                   <a
                     class="hero-social"
                     href="https://www.linkedin.com/in/nicolas-garcia-rosell-6525b6202/"
@@ -261,34 +261,7 @@
           </div>
 
           <div class="experience-list">
-            
-            <article class="role-card">
-              <div class="role-top">
-                <div>
-                  <div class="role-meta">Jan 2023 - Present</div>
-                  <h3>Sr. Engineer, Software Quality</h3>
-                  <p class="org">Universal Orlando Resorts - Digital &amp; Technology</p>
-                </div>
-              </div>
-              <p class="role-scope">Owned automation architecture, reliability, and delivery quality across large-scale integrated systems.</p>
-              <ul>
-                <li>Architected a layered automation framework supporting <strong>8-10 enterprise applications</strong>, owning automation strategy for <strong>4-5 active integrations</strong>.</li><li>Increased automation coverage from <strong>~20% to 98%</strong> <strong>(300+ scenarios)</strong> and reduced regression runtime <strong>6-7×</strong> through parallel.</li><li>Reduced test flakiness <strong>~80%</strong> across <strong>300+ scenarios</strong> by eliminating static dependencies and implementing API-driven dynamic test.</li>
-              </ul>
-            </article>
-
-            <article class="role-card">
-              <div class="role-top">
-                <div>
-                  <div class="role-meta">Jan 2022 - Dec 2022</div>
-                  <h3>Software Quality Engineer (Contract)</h3>
-                  <p class="org">Universal Orlando Resorts - Digital &amp; Technology</p>
-                </div>
-              </div>
-              <p class="role-scope">Expanded automation coverage and stabilized release confidence during high-frequency product delivery.</p>
-              <ul>
-                <li>Expanded automation coverage from <strong>80 to 285+ UI/mobile test cases</strong> supporting weekly and bi-weekly release cycles.</li><li>Collaborated with <strong>3+ engineering teams</strong> to diagnose and resolve integration and cross-system defects, improving regression reliability.</li><li>Performed root-cause analysis on recurring automation and environment failures each release cycle, improving test stability and.</li>
-              </ul>
-            </article>
+            {{EXPERIENCE_CARDS}}
           </div>
         </div>
       </section>
