@@ -20876,6 +20876,10 @@
     dark: "Dark",
     light: "Light"
   };
+  var THEME_ICONS = {
+    dark: "\u263E",
+    light: "\u2600"
+  };
   function isTheme(value) {
     return !!value && THEMES.includes(value);
   }
@@ -20909,8 +20913,9 @@
   function updateButtons(theme) {
     document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
       button.dataset.themeValue = theme;
-      button.innerHTML = `<span>Theme</span><strong>${THEME_LABELS[theme]}</strong>`;
+      button.innerHTML = `<span class="theme-toggle__icon" aria-hidden="true">${THEME_ICONS[theme]}</span>`;
       button.setAttribute("aria-label", `Switch color theme. Current theme: ${THEME_LABELS[theme]}`);
+      button.setAttribute("title", `${THEME_LABELS[theme]} theme`);
     });
   }
   function initThemeToggle(options = {}) {

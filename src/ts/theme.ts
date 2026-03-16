@@ -8,6 +8,11 @@ const THEME_LABELS: Record<ThemeName, string> = {
   light: "Light",
 };
 
+const THEME_ICONS: Record<ThemeName, string> = {
+  dark: "☾",
+  light: "☀",
+};
+
 type ThemeToggleOptions = {
   onChange?: (theme: ThemeName) => void;
 };
@@ -52,8 +57,9 @@ function getCurrentTheme(): ThemeName {
 function updateButtons(theme: ThemeName): void {
   document.querySelectorAll<HTMLButtonElement>("[data-theme-toggle]").forEach((button) => {
     button.dataset.themeValue = theme;
-    button.innerHTML = `<span>Theme</span><strong>${THEME_LABELS[theme]}</strong>`;
+    button.innerHTML = `<span class="theme-toggle__icon" aria-hidden="true">${THEME_ICONS[theme]}</span>`;
     button.setAttribute("aria-label", `Switch color theme. Current theme: ${THEME_LABELS[theme]}`);
+    button.setAttribute("title", `${THEME_LABELS[theme]} theme`);
   });
 }
 
